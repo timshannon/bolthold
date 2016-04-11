@@ -10,10 +10,8 @@ and including tests and benchmarks will at a minimum be useful to me.  Maybe it'
 ##Indexes
 In every GobStore there will be a reserved bucket *_indexes* which will be used to hold indexes that point back to another
 bucket's Key system.  Indexes will be defined as functions which will return a GoType and be run against every existing 
-row in a given Bucket.
+row in a given Bucket.  There will be helper functions that can optionally be used to simply add indexes for a specific field at the cost of a reflection lookup.
 
 
 ## Queries
-Queries will be chainable constructs that apply to the dataset in the order they are chained.  There will be 2 types of
-queries.  Key queries (includes indexes) and value queries. 
-
+Queries will be chainable constructs that apply to the dataset in the order they are chained.  Indexes will be used in queries only if explicitly specified.  There will be no "query optimiser".
