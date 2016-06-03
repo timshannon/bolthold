@@ -50,12 +50,17 @@ func (s *Store) Close() error {
 // every write.  This Function allows you specify when the index write overhead happens
 func (s *Store) AddIndexes(storer Storer) error {
 
-	indexes := storer.Indexes()
+	//indexes := storer.Indexes()
 
-	for i := range indexes {
+	//for i := range indexes {
 
-	}
+	//}
 
+	return errors.New("TODO")
+}
+
+// createIfNotExists checks if an index exists, and if it doesn't, it creates it and populates it
+func (i *Index) createIfNotExists(store *Store, storer Storer) error {
 	return errors.New("TODO")
 }
 
@@ -68,13 +73,13 @@ func (s *Store) RemoveIndex(storer Storer, indexName string) error {
 // Storer is the Interface to implement to skip reflect calls on all data passed into the gobstore
 type Storer interface {
 	Type() string
-	Indexes() []Index
+	Indexes() map[string]Index //[indexname]indexFunc
 }
 
 // anonType is created from a reflection of an unknown interface
 type anonStorer struct {
 	rType   reflect.Type
-	indexes []Index
+	indexes map[string]Index
 }
 
 // Type returns the name of the type as determined from the reflect package
@@ -83,7 +88,7 @@ func (t *anonStorer) Type() string {
 }
 
 // Indexes returns the Indexes determined by the reflect package on this type
-func (t *anonStorer) Indexes() []Index {
+func (t *anonStorer) Indexes() map[string]Index {
 	return t.indexes
 }
 
@@ -98,7 +103,8 @@ func NewStorer(dataType interface{}) Storer {
 	}
 
 	storer := &anonStorer{
-		rType: reflect.TypeOf(dataType),
+		rType:   reflect.TypeOf(dataType),
+		indexes: make(map[string]Index),
 	}
 
 	if storer.rType.Name() == "" {
@@ -113,12 +119,9 @@ func NewStorer(dataType interface{}) Storer {
 				indexName = storer.rType.Field(i).Name
 			}
 
-			storer.indexes = append(storer.indexes, Index{
-				Name: indexName,
-				Func: func(name string, value interface{}) ([]byte, error) {
-					return encode(reflect.ValueOf(value).FieldByName(name).Interface())
-				},
-			})
+			storer.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
+				return encode(reflect.ValueOf(value).FieldByName(name).Interface())
+			}
 		}
 	}
 
