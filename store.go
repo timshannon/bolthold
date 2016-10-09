@@ -5,7 +5,6 @@
 package gobstore
 
 import (
-	"errors"
 	"reflect"
 	"strings"
 	"time"
@@ -45,34 +44,52 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// AddIndexes adds all the indexes defined by the passed in Storer
-// this automatically happens if an index is defined but not found in the store, and is checked on
-// every write.  This Function allows you specify when the index write overhead happens
-func (s *Store) AddIndexes(storer Storer) error {
+// ReIndex removes any existing indexes and adds all the indexes defined by the passed in datatype example
+// This function allows you to index an already existing boltDB file, or refresh any missing indexes
+func (s *Store) ReIndex(exampleType interface{}) error {
+	storer := NewStorer(exampleType)
 
-	//indexes := storer.Indexes()
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
+		indexes := storer.Indexes()
+		// delete existing indexes
+		// TODO: Remove indexes not specified the storer index list?
+		// good for cleanup, bad for possible side effects
 
-	//for i := range indexes {
+		for indexName := range indexes {
+			err := tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
+			if err != nil {
+				return err
+			}
+		}
 
-	//}
+		c := tx.Bucket([]byte(storer.Type())).Cursor()
 
-	return errors.New("TODO")
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			err := decode(v, exampleType)
+			if err != nil {
+				return err
+			}
+			err = indexAdd(storer, tx, k, exampleType)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
-// createIfNotExists checks if an index exists, and if it doesn't, it creates it and populates it
-func (i *Index) createIfNotExists(store *Store, storer Storer) error {
-	return errors.New("TODO")
-}
-
-// RemoveIndex removes an index from the store.  If a Storer still has an index defined, or if a type
-// as an index tag, it will be re-added on the next write
+// RemoveIndex removes an index from the store.
 func (s *Store) RemoveIndex(storer Storer, indexName string) error {
-	return errors.New("TODO")
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
+		return tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
+
+	})
 }
 
 // Storer is the Interface to implement to skip reflect calls on all data passed into the gobstore
 type Storer interface {
-	Type() string
+	Type() string              // used as the boltdb bucket name
 	Indexes() map[string]Index //[indexname]indexFunc
 }
 
