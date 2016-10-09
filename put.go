@@ -50,7 +50,11 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return err
 	}
 
-	// upsert any indexes
+	// insert any indexes
+	err = indexAdd(storer, tx, gk, data)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -58,8 +62,9 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 // Update updates an existing record in the GobStore
 // if the Key doesn't already exist in the store, then it fails with ErrNotFound
 func (s *Store) Update(key interface{}, data interface{}) error {
-
-	return errors.New("TODO")
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
+		return s.TxUpdate(tx, key, data)
+	})
 }
 
 // TxUpdate is the same as Update except it allows you to specify your own transaction
@@ -68,14 +73,49 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	return errors.New("TODO")
+	storer := NewStorer(data)
+
+	gk, err := encode(key)
+
+	if err != nil {
+		return err
+	}
+
+	if !s.exists(tx, gk, storer) {
+		return ErrNotFound
+	}
+
+	value, err := encode(data)
+	if err != nil {
+		return err
+	}
+
+	// put data
+	err = tx.Bucket([]byte(storer.Type())).Put(gk, value)
+	if err != nil {
+		return err
+	}
+
+	// delete any existing indexes
+	err = indexDelete(storer, tx, gk, data)
+	if err != nil {
+		return err
+	}
+	// insert any new indexes
+	err = indexAdd(storer, tx, gk, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Upsert inserts the record into the gobstore if it doesn't exist.  If it does already exist, then it updates
 // the existing record
 func (s *Store) Upsert(key interface{}, data interface{}) error {
-
-	return errors.New("TODO")
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
+		return s.TxUpsert(tx, key, data)
+	})
 }
 
 // TxUpsert is the same as Upsert except it allows you to specify your own transaction
@@ -84,6 +124,40 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	return errors.New("TODO")
+	storer := NewStorer(data)
 
+	gk, err := encode(key)
+
+	if err != nil {
+		return err
+	}
+
+	exists := s.exists(tx, gk, storer)
+
+	value, err := encode(data)
+	if err != nil {
+		return err
+	}
+
+	// put data
+	err = tx.Bucket([]byte(storer.Type())).Put(gk, value)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		// delete any existing indexes
+		err = indexDelete(storer, tx, gk, data)
+		if err != nil {
+			return err
+		}
+	}
+
+	// insert any new indexes
+	err = indexAdd(storer, tx, gk, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

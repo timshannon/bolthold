@@ -24,7 +24,10 @@ func indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		indexUpdate(storer.Type(), name, index, tx, key, data, false)
+		err := indexUpdate(storer.Type(), name, index, tx, key, data, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -35,7 +38,10 @@ func indexDelete(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		indexUpdate(storer.Type(), name, index, tx, key, data, true)
+		err := indexUpdate(storer.Type(), name, index, tx, key, data, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
