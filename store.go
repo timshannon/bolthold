@@ -46,7 +46,9 @@ func (s *Store) Close() error {
 
 // ReIndex removes any existing indexes and adds all the indexes defined by the passed in datatype example
 // This function allows you to index an already existing boltDB file, or refresh any missing indexes
-func (s *Store) ReIndex(exampleType interface{}) error {
+// if bucketName is nil, then we'll assume a bucketName of storer.Type()
+// if a bucketname is specified, then the data will be moved to the gobstore standard bucket of storer.Type()
+func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 	storer := NewStorer(exampleType)
 
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
@@ -62,16 +64,27 @@ func (s *Store) ReIndex(exampleType interface{}) error {
 			}
 		}
 
-		c := tx.Bucket([]byte(storer.Type())).Cursor()
+		moveData := true
+
+		if bucketName == nil {
+			bucketName = []byte(storer.Type())
+			moveData = false
+		}
+
+		c := tx.Bucket(bucketName).Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
-			err := decode(v, exampleType)
-			if err != nil {
-				return err
-			}
-			err = indexAdd(storer, tx, k, exampleType)
-			if err != nil {
-				return err
+			if moveData {
+				//TODO
+			} else {
+				err := decode(v, exampleType)
+				if err != nil {
+					return err
+				}
+				err = indexAdd(storer, tx, k, exampleType)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
