@@ -45,7 +45,13 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	}
 
 	// insert data
-	err = tx.Bucket([]byte(storer.Type())).Put(gk, value)
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
+	err = b.Put(gk, value)
+
 	if err != nil {
 		return err
 	}
@@ -91,7 +97,12 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// put data
-	err = tx.Bucket([]byte(storer.Type())).Put(gk, value)
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
+	err = b.Put(gk, value)
 	if err != nil {
 		return err
 	}
@@ -140,7 +151,12 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// put data
-	err = tx.Bucket([]byte(storer.Type())).Put(gk, value)
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
+	err = b.Put(gk, value)
 	if err != nil {
 		return err
 	}
