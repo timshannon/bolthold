@@ -139,13 +139,23 @@ func NewStorer(dataType interface{}) Storer {
 		return s
 	}
 
+	tp := reflect.TypeOf(dataType)
+
+	if tp.Kind() == reflect.Ptr {
+		tp = tp.Elem()
+	}
+
 	storer := &anonStorer{
-		rType:   reflect.TypeOf(dataType),
+		rType:   tp,
 		indexes: make(map[string]Index),
 	}
 
 	if storer.rType.Name() == "" {
 		panic("Invalid Type for Storer.  Type is unnamed")
+	}
+
+	if storer.rType.Kind() != reflect.Struct {
+		panic("Invalid Type for Storer.  Gobstore only works with structs")
 	}
 
 	for i := 0; i < storer.rType.NumField(); i++ {

@@ -35,6 +35,11 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return err
 	}
 
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
 	if s.exists(tx, gk, storer) {
 		return ErrKeyExists
 	}
@@ -45,10 +50,6 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	}
 
 	// insert data
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
-	if err != nil {
-		return err
-	}
 
 	err = b.Put(gk, value)
 
@@ -87,6 +88,11 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
 	if !s.exists(tx, gk, storer) {
 		return ErrNotFound
 	}
@@ -97,11 +103,6 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// put data
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
-	if err != nil {
-		return err
-	}
-
 	err = b.Put(gk, value)
 	if err != nil {
 		return err
@@ -143,6 +144,11 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if err != nil {
+		return err
+	}
+
 	exists := s.exists(tx, gk, storer)
 
 	value, err := encode(data)
@@ -151,11 +157,6 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// put data
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
-	if err != nil {
-		return err
-	}
-
 	err = b.Put(gk, value)
 	if err != nil {
 		return err
