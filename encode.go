@@ -17,7 +17,7 @@ func init() {
 		New: func() interface{} {
 			var buff bytes.Buffer
 			return &encoder{
-				buffer:  buff,
+				buffer:  &buff,
 				Encoder: gob.NewEncoder(&buff),
 			}
 		},
@@ -27,7 +27,7 @@ func init() {
 		New: func() interface{} {
 			var buff bytes.Buffer
 			return &decoder{
-				buffer:  buff,
+				buffer:  &buff,
 				Decoder: gob.NewDecoder(&buff),
 			}
 		},
@@ -36,12 +36,12 @@ func init() {
 }
 
 type encoder struct {
-	buffer bytes.Buffer
+	buffer *bytes.Buffer
 	*gob.Encoder
 }
 
 type decoder struct {
-	buffer bytes.Buffer
+	buffer *bytes.Buffer
 	*gob.Decoder
 }
 

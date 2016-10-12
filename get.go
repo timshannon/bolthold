@@ -31,6 +31,7 @@ func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
 	}
 
 	value := tx.Bucket([]byte(storer.Type())).Get(gk)
+
 	if value == nil {
 		return ErrNotFound
 	}

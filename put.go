@@ -50,7 +50,6 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	}
 
 	// insert data
-
 	err = b.Put(gk, value)
 
 	if err != nil {

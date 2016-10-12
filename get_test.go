@@ -23,7 +23,7 @@ func TestGet(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore %s", err)
+			t.Fatalf("Error getting data from gobstore: %s", err)
 		}
 
 		if !data.equal(result) {
