@@ -56,7 +56,11 @@ func encode(value interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return en.buffer.Bytes(), nil
+	rtn := make([]byte, en.buffer.Len())
+
+	copy(rtn, en.buffer.Bytes())
+
+	return rtn, nil
 }
 
 func decode(data []byte, value interface{}) error {
