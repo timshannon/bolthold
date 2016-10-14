@@ -22,7 +22,7 @@ func (s *Store) Get(key, result interface{}) error {
 
 // TxGet allows you to pass in your own bolt transaction to retrieve a value from the gobstore and puts it into result
 func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
-	storer := NewStorer(result)
+	storer := newStorer(result)
 
 	gk, err := encode(key)
 

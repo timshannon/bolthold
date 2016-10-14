@@ -49,7 +49,7 @@ func (s *Store) Close() error {
 // if bucketName is nil, then we'll assume a bucketName of storer.Type()
 // if a bucketname is specified, then the data will be copied to the gobstore standard bucket of storer.Type()
 func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
-	storer := NewStorer(exampleType)
+	storer := newStorer(exampleType)
 
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		indexes := storer.Indexes()
@@ -129,10 +129,10 @@ func (t *anonStorer) Indexes() map[string]Index {
 	return t.indexes
 }
 
-// NewStorer creates a type which satisfies the Storer interface based on reflection of the passed in dataType
+// newStorer creates a type which satisfies the Storer interface based on reflection of the passed in dataType
 // if the Type doesn't meet the requirements of a Storer (i.e. doesn't have a name) it panics
 // You can avoid any reflection costs, by implementing the Storer interface on a type
-func NewStorer(dataType interface{}) Storer {
+func newStorer(dataType interface{}) Storer {
 	s, ok := dataType.(Storer)
 
 	if ok {

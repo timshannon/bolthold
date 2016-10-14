@@ -27,7 +27,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := NewStorer(data)
+	storer := newStorer(data)
 
 	gk, err := encode(key)
 
@@ -79,7 +79,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := NewStorer(data)
+	storer := newStorer(data)
 
 	gk, err := encode(key)
 
@@ -135,7 +135,7 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := NewStorer(data)
+	storer := newStorer(data)
 
 	gk, err := encode(key)
 
