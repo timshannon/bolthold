@@ -32,6 +32,7 @@ func TestGet(t *testing.T) {
 	})
 }
 
+/*
 func TestFind(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
@@ -59,3 +60,4 @@ func TestFind(t *testing.T) {
 		}
 	})
 }
+*/

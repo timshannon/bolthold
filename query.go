@@ -1,6 +1,7 @@
 package gobstore
 
 import (
+	"bytes"
 	"fmt"
 	"unicode"
 )
@@ -118,6 +119,34 @@ func (c *Criterion) Le(value interface{}) *Query {
 	return c.op(le, value)
 }
 
+// test if the criterion passes with the passed in value
+func (c *Criterion) test(value []byte) (bool, error) {
+	d, err := encode(c.value)
+	if err != nil {
+		return false, err
+	}
+
+	result := bytes.Compare(value, d)
+	switch c.operator {
+	case eq:
+		return result == 0, nil
+	case ne:
+		return result != 0, nil
+	case gt:
+		return result > 0, nil
+	case lt:
+		return result < 0, nil
+	case le:
+		return result < 0 || result == 0, nil
+	case ge:
+		return result > 0 || result == 0, nil
+	default:
+		panic("invalid operator")
+	}
+
+	return false, nil
+}
+
 func startsUpper(str string) bool {
 	for _, r := range str {
 		return unicode.IsUpper(r)
@@ -150,6 +179,8 @@ func (q *Query) String() string {
 				s += "<="
 			case ge:
 				s += ">="
+			default:
+				panic("invalid operator")
 			}
 			s += " " + fmt.Sprintf("%v", criteria[i].value)
 			s += "\n\tAND "
