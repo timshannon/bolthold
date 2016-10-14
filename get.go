@@ -6,6 +6,7 @@ package gobstore
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 )
@@ -55,5 +56,6 @@ func (s *Store) Find(result interface{}, query *Query) error {
 // TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the gobstore
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 
+	fmt.Println(query.String())
 	return errors.New("TODO")
 }
