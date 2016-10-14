@@ -60,7 +60,6 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 		return err
 	}
 
-	// TODO: if it's not performant to do this on every single call, then do it once and store that it's done
 	b, err := tx.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
 	if err != nil {
 		return err
@@ -91,6 +90,11 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 	}
 
 	return nil
+}
+
+// IndexExists tests if an index exists for the passed in field name
+func (s *Store) IndexExists(tx *bolt.Tx, typeName, indexName string) bool {
+	return (tx.Bucket(indexBucketName(typeName, indexName)) != nil)
 }
 
 // indexBucketName returns the name of the bolt bucket where this index is stored

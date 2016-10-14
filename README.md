@@ -17,7 +17,14 @@ row in a given Bucket, or simple as struct tags defining a particular field as i
 
 ## Queries
 Queries will be chainable constructs that apply to the dataset in the order they are chained. There will be no "query optimiser".
-The first index hit will the one used.
+The first index hit will be the one used.
+
+Queries will look like this:
+```
+s.Find(Where("Name").Eq("Tim Shannon").And("DOB").Lt(time.Now()).Or(Where("Title").Eq("Boss").And("DOB").Lt(time.Now())))
+
+```
+
 
 ## Bucket Layout
 One Go Type will have one bucket, and multiple index buckets.  You can skip all of reflect calls by implementing the 

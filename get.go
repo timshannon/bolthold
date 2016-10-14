@@ -43,3 +43,17 @@ func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
 func (s *Store) exists(tx *bolt.Tx, key []byte, storer Storer) bool {
 	return (tx.Bucket([]byte(storer.Type())).Get(key) != nil)
 }
+
+// Find retrieves a set of values from the gobstore that matches the passed in query
+// result must be a pointer to a slice
+func (s *Store) Find(result interface{}, query *Query) error {
+	return s.Bolt().View(func(tx *bolt.Tx) error {
+		return s.TxFind(tx, result, query)
+	})
+}
+
+// TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the gobstore
+func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
+
+	return errors.New("TODO")
+}
