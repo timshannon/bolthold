@@ -6,6 +6,7 @@ package gobstore
 
 import (
 	"errors"
+	"reflect"
 
 	"github.com/boltdb/bolt"
 )
@@ -58,17 +59,39 @@ func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 }
 
 func (s *Store) runQuery(tx *bolt.Tx, result interface{}, storer Storer, query *Query) error {
+	slicePtr := reflect.ValueOf(result)
+	if slicePtr.Kind() != reflect.Ptr || slicePtr.Elem().Kind() != reflect.Slice {
+		panic("result argument must be a slice address")
+	}
 
-	//if query.index == "" || !s.IndexExists(tx, storer.Type(), query.index) {
-	//// test key
-	//c := tx.Bucket([]byte(storer.Type())).Cursor()
+	sliceVal := slicePtr.Elem()
+	elType := sliceVal.Type().Elem()
+	sliceVal = sliceVal.Slice(0, 0) // empty slice
 
-	//for k, v := c.First(); k != nil; k, v = c.Next() {
-	//for field, criteria := range query.fieldCriteria {
+	iter, err := newIterator(tx, storer.Type(), query.index, query.fieldCriteria[query.index])
+	if err != nil {
+		return err
+	}
 
-	//}
-	//}
+	for k, v := iter.First(); k != nil; k, v = iter.Next() {
+		val := reflect.New(elType)
 
-	//}
-	return errors.New("TODO")
+		err = decode(v, val.Interface())
+		if err != nil {
+			return err
+		}
+
+		ok, err := query.matchesAllFields(val)
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			// add to result
+			sliceVal = reflect.Append(sliceVal, val)
+		}
+
+	}
+
+	return nil
 }

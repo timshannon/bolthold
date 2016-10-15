@@ -16,6 +16,8 @@ const GobStoreIndexTag = "gobstoreIndex"
 
 const indexBucketPrefix = "_index"
 
+const keyIndex = ""
+
 // Index is a function that returns the indexable bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
@@ -129,4 +131,92 @@ func (v indexKeys) remove(key []byte) {
 		v[len(v)-1] = nil
 		v = v[:len(v)-1]
 	}
+}
+
+type indexIter struct {
+	currentIndex int
+	keys         [][]byte
+	bucket       *bolt.Bucket
+}
+
+func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion) (iterator, error) {
+	iter := &indexIter{
+		currentIndex: -1,
+		bucket:       tx.Bucket([]byte(typeName)),
+	}
+
+	//TODO: For now we're going to keep all the matching keys in memory, eventually I'd like to
+	// keep the first X keys in memory, and test for more as needed
+	// Where X will be a number that is worth the cost of re-rerunning the criterion
+	var iBucket *bolt.Bucket
+
+	if indexName == keyIndex {
+		iBucket = tx.Bucket([]byte(typeName))
+	} else {
+		iBucket = tx.Bucket(indexBucketName(typeName, indexName))
+		if iBucket == nil {
+			// no index, use regular iterator
+			return tx.Bucket([]byte(typeName)).Cursor(), nil
+
+		}
+	}
+
+	c := iBucket.Cursor()
+
+	for k, v := c.First(); k != nil; k, v = c.Next() {
+		include, err := matchesAllCriteria(criteria, k)
+		if err != nil {
+			return nil, err
+		}
+
+		if include {
+			if indexName == keyIndex {
+				iter.keys = append(iter.keys, k)
+			} else {
+				// append the slice of keys stored in the index
+				var keys = new(indexKeys)
+				err := decode(v, keys)
+				if err != nil {
+					return nil, err
+				}
+				iter.keys = append(iter.keys, [][]byte(*keys)...)
+			}
+		}
+	}
+
+	return iter, nil
+}
+
+func (i *indexIter) get() (key []byte, value []byte) {
+	key = i.keys[i.currentIndex]
+	value = i.bucket.Get(key)
+	return
+
+}
+func (i *indexIter) First() (key []byte, value []byte) {
+	i.currentIndex = 0
+	return i.get()
+}
+
+func (i *indexIter) Last() (key []byte, value []byte) {
+	i.currentIndex = (len(i.keys) - 1)
+	return i.get()
+}
+
+func (i *indexIter) Next() (key []byte, value []byte) {
+	if i.currentIndex == (len(i.keys) - 1) {
+		return nil, nil
+	}
+
+	i.currentIndex++
+	return i.get()
+}
+
+func (i *indexIter) Prev() (key []byte, value []byte) {
+	if i.currentIndex <= 0 {
+		return nil, nil
+	}
+
+	i.currentIndex--
+	return i.get()
 }

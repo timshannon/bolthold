@@ -3,6 +3,7 @@ package gobstore
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"unicode"
 )
 
@@ -31,9 +32,17 @@ type Query struct {
 
 // Criterion is an operator and a value that a given field needs to match on
 type Criterion struct {
-	query    *Query
-	operator int
-	value    interface{}
+	query        *Query
+	operator     int
+	value        interface{}
+	valueEncoded []byte
+}
+
+type iterator interface {
+	First() (key []byte, value []byte)
+	Last() (key []byte, value []byte)
+	Next() (key []byte, value []byte)
+	Prev() (key []byte, value []byte)
 }
 
 // Where starts a query for specifying the criteria that an object in the gobstore needs to match to
@@ -79,6 +88,25 @@ func (q *Query) Or(query *Query) *Query {
 	return q
 }
 
+func (q *Query) matchesAllFields(value reflect.Value) (bool, error) {
+	for field, criteria := range q.fieldCriteria {
+		fVal := value.FieldByName(field)
+		fBts, err := encode(fVal)
+		if err != nil {
+			return false, err
+		}
+		ok, err := matchesAllCriteria(criteria, fBts)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 func (c *Criterion) op(op int, value interface{}) *Query {
 	c.operator = op
 	c.value = value
@@ -121,12 +149,16 @@ func (c *Criterion) Le(value interface{}) *Query {
 
 // test if the criterion passes with the passed in value
 func (c *Criterion) test(value []byte) (bool, error) {
-	d, err := encode(c.value)
-	if err != nil {
-		return false, err
+	if c.valueEncoded == nil {
+		d, err := encode(c.value)
+		if err != nil {
+			return false, err
+		}
+
+		c.valueEncoded = d
 	}
 
-	result := bytes.Compare(value, d)
+	result := bytes.Compare(value, c.valueEncoded)
 	switch c.operator {
 	case eq:
 		return result == 0, nil
@@ -145,6 +177,20 @@ func (c *Criterion) test(value []byte) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func matchesAllCriteria(criteria []*Criterion, value []byte) (bool, error) {
+	for i := range criteria {
+		ok, err := criteria[i].test(value)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func startsUpper(str string) bool {
