@@ -141,7 +141,7 @@ func newStorer(dataType interface{}) Storer {
 
 	tp := reflect.TypeOf(dataType)
 
-	if tp.Kind() == reflect.Ptr {
+	for tp.Kind() == reflect.Ptr {
 		tp = tp.Elem()
 	}
 

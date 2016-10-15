@@ -90,8 +90,8 @@ func (q *Query) Or(query *Query) *Query {
 
 func (q *Query) matchesAllFields(value reflect.Value) (bool, error) {
 	for field, criteria := range q.fieldCriteria {
-		fVal := value.FieldByName(field)
-		fBts, err := encode(fVal)
+		fVal := value.Elem().FieldByName(field)
+		fBts, err := encode(fVal.Interface())
 		if err != nil {
 			return false, err
 		}

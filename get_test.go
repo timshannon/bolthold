@@ -32,7 +32,6 @@ func TestGet(t *testing.T) {
 	})
 }
 
-/*
 func TestFind(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
@@ -46,18 +45,15 @@ func TestFind(t *testing.T) {
 			t.Fatalf("Error creating data for get test: %s", err)
 		}
 
-		result := &TestData{}
+		var result []*TestData
+		//var result []TestData
+		// handle pointer conversion
 
-		err = store.Find(result, gobstore.Where("Name").Eq("Test Name").And("LastName").Gt("Shannon").
-			Or(gobstore.Where("Name").Eq("Test other Name").And("DOB").Ge(time.Now())))
+		err = store.Find(&result, gobstore.Where("Name").Eq("Test Name"))
 
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error finding data from gobstore: %s", err)
 		}
 
-		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
-		}
 	})
 }
-*/

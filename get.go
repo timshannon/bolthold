@@ -55,10 +55,10 @@ func (s *Store) Find(result interface{}, query *Query) error {
 
 // TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the gobstore
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
-	return s.runQuery(tx, result, newStorer(result), query)
+	return s.runQuery(tx, result, query, nil)
 }
 
-func (s *Store) runQuery(tx *bolt.Tx, result interface{}, storer Storer, query *Query) error {
+func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
 	slicePtr := reflect.ValueOf(result)
 	if slicePtr.Kind() != reflect.Ptr || slicePtr.Elem().Kind() != reflect.Slice {
 		panic("result argument must be a slice address")
@@ -68,12 +68,21 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, storer Storer, query *
 	elType := sliceVal.Type().Elem()
 	sliceVal = sliceVal.Slice(0, 0) // empty slice
 
-	iter, err := newIterator(tx, storer.Type(), query.index, query.fieldCriteria[query.index])
+	iter, err := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query.index, query.fieldCriteria[query.index])
 	if err != nil {
 		return err
 	}
 
+	newKeys := make(keyList, 0)
+
 	for k, v := iter.First(); k != nil; k, v = iter.Next() {
+		if len(retrievedKeys) == 0 {
+			// don't check this record if it's already been retrieved
+			if retrievedKeys.in(k) {
+				continue
+			}
+		}
+
 		val := reflect.New(elType)
 
 		err = decode(v, val.Interface())
@@ -89,8 +98,22 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, storer Storer, query *
 		if ok {
 			// add to result
 			sliceVal = reflect.Append(sliceVal, val)
+			// track that this key's entry has been added to the result list
+			newKeys.add(k)
+		}
+	}
+
+	if len(query.ors) > 0 {
+		for i := range newKeys {
+			retrievedKeys.add(newKeys[i])
 		}
 
+		for i := range query.ors {
+			err = s.runQuery(tx, result, query.ors[i], retrievedKeys)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

@@ -56,7 +56,7 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 		return nil
 	}
 
-	indexValue := make(indexKeys, 0)
+	indexValue := make(keyList, 0)
 
 	if err != nil {
 		return err
@@ -104,15 +104,16 @@ func indexBucketName(typeName, indexName string) []byte {
 	return []byte(indexBucketPrefix + ":" + typeName + ":" + indexName)
 }
 
-// indexKeys is a slice of unique, sorted keys([]byte) that an index points to
-type indexKeys [][]byte
+// keyList is a slice of unique, sorted keys([]byte) such as what an index points to
+type keyList [][]byte
 
-func (v indexKeys) add(key []byte) {
+func (v keyList) add(key []byte) {
 	i := sort.Search(len(v), func(i int) bool {
 		return bytes.Compare(v[i], key) >= 0
 	})
 
 	if i < len(v) {
+		// already added
 		return
 	}
 
@@ -121,7 +122,7 @@ func (v indexKeys) add(key []byte) {
 	v[i] = key
 }
 
-func (v indexKeys) remove(key []byte) {
+func (v keyList) remove(key []byte) {
 	i := sort.Search(len(v), func(i int) bool {
 		return bytes.Compare(v[i], key) >= 0
 	})
@@ -131,6 +132,14 @@ func (v indexKeys) remove(key []byte) {
 		v[len(v)-1] = nil
 		v = v[:len(v)-1]
 	}
+}
+
+func (v keyList) in(key []byte) bool {
+	i := sort.Search(len(v), func(i int) bool {
+		return bytes.Compare(v[i], key) >= 0
+	})
+
+	return (i < len(v))
 }
 
 type indexIter struct {
@@ -174,7 +183,7 @@ func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion)
 				iter.keys = append(iter.keys, k)
 			} else {
 				// append the slice of keys stored in the index
-				var keys = new(indexKeys)
+				var keys = new(keyList)
 				err := decode(v, keys)
 				if err != nil {
 					return nil, err
