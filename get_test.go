@@ -46,8 +46,6 @@ func TestFind(t *testing.T) {
 		}
 
 		var result []*TestData
-		//var result []TestData
-		// handle pointer conversion
 
 		err = store.Find(&result, gobstore.Where("Name").Eq("Test Name"))
 

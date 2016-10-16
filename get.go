@@ -65,8 +65,15 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 	}
 
 	sliceVal := slicePtr.Elem()
-	elType := sliceVal.Type().Elem()
 	sliceVal = sliceVal.Slice(0, 0) // empty slice
+
+	elType := sliceVal.Type().Elem()
+
+	oType := elType
+
+	for elType.Kind() == reflect.Ptr {
+		elType = elType.Elem()
+	}
 
 	iter, err := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query.index, query.fieldCriteria[query.index])
 	if err != nil {
@@ -97,7 +104,11 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 
 		if ok {
 			// add to result
-			sliceVal = reflect.Append(sliceVal, val)
+			if oType.Kind() == reflect.Ptr {
+				sliceVal = reflect.Append(sliceVal, val)
+			} else {
+				sliceVal = reflect.Append(sliceVal, val.Elem())
+			}
 			// track that this key's entry has been added to the result list
 			newKeys.add(k)
 		}
