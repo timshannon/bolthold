@@ -1,6 +1,7 @@
 package gobstore_test
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,25 +33,43 @@ func TestGet(t *testing.T) {
 	})
 }
 
-func TestFind(t *testing.T) {
+func TestFindEqual(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
-		key := "testKey"
+		key := "findKey"
 		data := &TestData{
-			Name: "Test Name",
+			Name: "Find This",
 			Time: time.Now(),
 		}
 
 		err := store.Insert(key, data)
 		if err != nil {
-			t.Fatalf("Error creating data for get test: %s", err)
+			t.Fatalf("Error creating data for find test: %s", err)
 		}
 
-		var result []*TestData
+		for i := 0; i < 100; i++ {
+			err := store.Insert(strconv.Itoa(i)+"test key", &TestData{
+				Name: "test name",
+				Time: time.Now(),
+			})
+			if err != nil {
+				t.Fatalf("Error creating data for find test: %s", err)
+			}
+		}
 
-		err = store.Find(&result, gobstore.Where("Name").Eq("Test Name"))
+		var result []TestData
+
+		err = store.Find(&result, gobstore.Where(gobstore.Key()).Eq("findkey"))
 
 		if err != nil {
 			t.Fatalf("Error finding data from gobstore: %s", err)
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("Find result count is %d wanted %d", len(result), 1)
+		}
+
+		if !result[0].equal(data) {
+			t.Fatalf("Got %s wanted %s.", result[0], data)
 		}
 
 	})

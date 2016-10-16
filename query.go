@@ -194,6 +194,10 @@ func matchesAllCriteria(criteria []*Criterion, value []byte) (bool, error) {
 }
 
 func startsUpper(str string) bool {
+	if str == "" {
+		return true
+	}
+
 	for _, r := range str {
 		return unicode.IsUpper(r)
 	}
