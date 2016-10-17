@@ -154,9 +154,9 @@ func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion)
 		bucket:       tx.Bucket([]byte(typeName)),
 	}
 
-	//TODO: For now we're going to keep all the matching keys in memory, eventually I'd like to
-	// keep the first X keys in memory, and test for more as needed
-	// Where X will be a number that is worth the cost of re-rerunning the criterion
+	//FIXME: Iterator should continue until it finds a record that matches the criteria
+	// this is all crap
+
 	var iBucket *bolt.Bucket
 
 	if indexName == keyIndex {
@@ -164,8 +164,6 @@ func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion)
 	} else {
 		iBucket = tx.Bucket(indexBucketName(typeName, indexName))
 		if iBucket == nil {
-			// no index, use regular iterator
-			//FIXME: assumes iterator has filtered the first index field
 			return tx.Bucket([]byte(typeName)).Cursor(), nil
 
 		}
