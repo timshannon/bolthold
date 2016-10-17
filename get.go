@@ -59,16 +59,17 @@ func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 }
 
 func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
-	slicePtr := reflect.ValueOf(result)
-	if slicePtr.Kind() != reflect.Ptr || slicePtr.Elem().Kind() != reflect.Slice {
+	resultVal := reflect.ValueOf(result)
+	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
 		panic("result argument must be a slice address")
 	}
 
-	sliceVal := slicePtr.Elem()
+	sliceVal := resultVal.Elem()
 	sliceVal = sliceVal.Slice(0, 0) // empty slice
 
 	elType := sliceVal.Type().Elem()
 
+	// preserve original type
 	oType := elType
 
 	for elType.Kind() == reflect.Ptr {
@@ -83,7 +84,7 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 	newKeys := make(keyList, 0)
 
 	for k, v := iter.First(); k != nil; k, v = iter.Next() {
-		if len(retrievedKeys) == 0 {
+		if len(retrievedKeys) != 0 {
 			// don't check this record if it's already been retrieved
 			if retrievedKeys.in(k) {
 				continue
@@ -97,7 +98,7 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 			return err
 		}
 
-		ok, err := query.matchesAllFields(val)
+		ok, err := query.matchesAllFields(k, val)
 		if err != nil {
 			return err
 		}
@@ -126,6 +127,8 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 			}
 		}
 	}
+
+	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 
 	return nil
 }

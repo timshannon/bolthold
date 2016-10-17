@@ -165,6 +165,7 @@ func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion)
 		iBucket = tx.Bucket(indexBucketName(typeName, indexName))
 		if iBucket == nil {
 			// no index, use regular iterator
+			//FIXME: assumes iterator has filtered the first index field
 			return tx.Bucket([]byte(typeName)).Cursor(), nil
 
 		}
@@ -197,6 +198,10 @@ func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion)
 }
 
 func (i *indexIter) get() (key []byte, value []byte) {
+	if len(i.keys) == 0 {
+		return nil, nil
+	}
+
 	key = i.keys[i.currentIndex]
 	value = i.bucket.Get(key)
 	return

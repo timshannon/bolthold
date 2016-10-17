@@ -88,9 +88,29 @@ func (q *Query) Or(query *Query) *Query {
 	return q
 }
 
-func (q *Query) matchesAllFields(value reflect.Value) (bool, error) {
+func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) {
 	for field, criteria := range q.fieldCriteria {
+		if field == q.index {
+			// already handled by index Iterator
+			continue
+		}
+
+		if field == Key() {
+			ok, err := matchesAllCriteria(criteria, key)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				return false, nil
+			}
+
+			continue
+		}
+
 		fVal := value.Elem().FieldByName(field)
+		if !fVal.IsValid() {
+			return false, fmt.Errorf("The field %s does not exist in the type %s", field, value)
+		}
 		fBts, err := encode(fVal.Interface())
 		if err != nil {
 			return false, err

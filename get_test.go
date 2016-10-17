@@ -33,7 +33,7 @@ func TestGet(t *testing.T) {
 	})
 }
 
-func TestFindEqual(t *testing.T) {
+func TestFindEqualKey(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "findKey"
 		data := &TestData{
@@ -46,7 +46,7 @@ func TestFindEqual(t *testing.T) {
 			t.Fatalf("Error creating data for find test: %s", err)
 		}
 
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
 			err := store.Insert(strconv.Itoa(i)+"test key", &TestData{
 				Name: "test name",
 				Time: time.Now(),
@@ -58,7 +58,49 @@ func TestFindEqual(t *testing.T) {
 
 		var result []TestData
 
-		err = store.Find(&result, gobstore.Where(gobstore.Key()).Eq("findkey"))
+		err = store.Find(&result, gobstore.Where(gobstore.Key()).Eq(key))
+
+		if err != nil {
+			t.Fatalf("Error finding data from gobstore: %s", err)
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("Find result count is %d wanted %d", len(result), 1)
+		}
+
+		if !result[0].equal(data) {
+			t.Fatalf("Got %s wanted %s.", result[0], data)
+		}
+
+	})
+}
+
+func TestFindEqualField(t *testing.T) {
+	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+		key := "findKey"
+		data := &TestData{
+			Name: "Find This",
+			Time: time.Now(),
+		}
+
+		err := store.Insert(key, data)
+		if err != nil {
+			t.Fatalf("Error creating data for find test: %s", err)
+		}
+
+		for i := 0; i < 10; i++ {
+			err := store.Insert(strconv.Itoa(i)+"test key", &TestData{
+				Name: "test name",
+				Time: time.Now(),
+			})
+			if err != nil {
+				t.Fatalf("Error creating data for find test: %s", err)
+			}
+		}
+
+		var result []TestData
+
+		err = store.Find(&result, gobstore.Where("Names").Eq(data.Name))
 
 		if err != nil {
 			t.Fatalf("Error finding data from gobstore: %s", err)
