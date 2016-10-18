@@ -18,6 +18,9 @@ const indexBucketPrefix = "_index"
 
 const keyIndex = ""
 
+// size of iterator keys stored in memory before more are fetched
+const iteratorKeyMinCacheSize = 100
+
 // Index is a function that returns the indexable bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
@@ -142,93 +145,167 @@ func (v keyList) in(key []byte) bool {
 	return (i < len(v))
 }
 
-type indexIter struct {
-	currentIndex int
-	keys         [][]byte
-	bucket       *bolt.Bucket
+type iterator struct {
+	keyCache    [][]byte
+	dataBucket  *bolt.Bucket
+	indexCursor *bolt.Cursor
+	nextKeys    func(bool, *bolt.Cursor) ([][]byte, error)
+	prepCursor  bool
+	err         error
 }
 
-func newIterator(tx *bolt.Tx, typeName, indexName string, criteria []*Criterion) (iterator, error) {
-	iter := &indexIter{
-		currentIndex: -1,
-		bucket:       tx.Bucket([]byte(typeName)),
+// TODO: Use cursor.Seek() by looking at query criteria to skip uncessary reads and seek to the earliest potential record
+
+func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
+	criteria := query.fieldCriteria[query.index]
+
+	iter := &iterator{
+		dataBucket: tx.Bucket([]byte(typeName)),
+		prepCursor: true,
 	}
 
-	//FIXME: Iterator should continue until it finds a record that matches the criteria
-	// this is all crap
+	// 3 scenarios
+	//   Key field
+	if query.index == Key() {
+		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
 
-	var iBucket *bolt.Bucket
+		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
+			var nKeys [][]byte
 
-	if indexName == keyIndex {
-		iBucket = tx.Bucket([]byte(typeName))
-	} else {
-		iBucket = tx.Bucket(indexBucketName(typeName, indexName))
-		if iBucket == nil {
-			return tx.Bucket([]byte(typeName)).Cursor(), nil
+			for len(nKeys) < iteratorKeyMinCacheSize {
+				var k []byte
+				if prepCursor {
+					k, _ = cursor.First()
+					prepCursor = false
+				} else {
+					k, _ = cursor.Next()
+				}
+				if k == nil {
+					return nKeys, nil
+				}
+
+				ok, err := matchesAllCriteria(criteria, k)
+				if err != nil {
+					return nil, err
+				}
+
+				if ok {
+					nKeys = append(nKeys, k)
+				}
+
+			}
+			return nKeys, nil
 
 		}
+
+		return iter
+
 	}
 
-	c := iBucket.Cursor()
+	iBucket := tx.Bucket(indexBucketName(typeName, query.index))
+	if iBucket == nil {
+		// bad index, filter through entire store
+		query.badIndex = true
 
-	for k, v := c.First(); k != nil; k, v = c.Next() {
-		include, err := matchesAllCriteria(criteria, k)
-		if err != nil {
-			return nil, err
+		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
+
+		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
+			var nKeys [][]byte
+
+			for len(nKeys) < iteratorKeyMinCacheSize {
+				var k []byte
+				if prepCursor {
+					k, _ = cursor.First()
+					prepCursor = false
+				} else {
+					k, _ = cursor.Next()
+				}
+				if k == nil {
+					return nKeys, nil
+				}
+
+				nKeys = append(nKeys, k)
+			}
+			return nKeys, nil
 		}
 
-		if include {
-			if indexName == keyIndex {
-				iter.keys = append(iter.keys, k)
+		return iter
+	}
+
+	//   indexed field
+	iter.indexCursor = iBucket.Cursor()
+
+	iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
+		var nKeys [][]byte
+
+		for len(nKeys) < iteratorKeyMinCacheSize {
+			var k, v []byte
+			if prepCursor {
+				k, v = cursor.First()
+				prepCursor = false
 			} else {
+				k, v = cursor.Next()
+			}
+			if k == nil {
+				return nKeys, nil
+			}
+			ok, err := matchesAllCriteria(criteria, k)
+			if err != nil {
+				return nil, err
+			}
+
+			if ok {
 				// append the slice of keys stored in the index
 				var keys = new(keyList)
 				err := decode(v, keys)
 				if err != nil {
 					return nil, err
 				}
-				iter.keys = append(iter.keys, [][]byte(*keys)...)
+
+				nKeys = append(nKeys, [][]byte(*keys)...)
 			}
+
 		}
+		return nKeys, nil
+
 	}
 
-	return iter, nil
+	return iter
+
 }
 
-func (i *indexIter) get() (key []byte, value []byte) {
-	if len(i.keys) == 0 {
+// Next returns the next key value that matches the iterators criteria
+// If no more kv's are available the return nil, if there is an error, they return nil
+// and iterator.Error() will return the error
+func (i *iterator) Next() (key []byte, value []byte) {
+	if i.err != nil {
 		return nil, nil
 	}
 
-	key = i.keys[i.currentIndex]
-	value = i.bucket.Get(key)
-	return
+	if len(i.keyCache) == 0 {
+		newKeys, err := i.nextKeys(i.prepCursor, i.indexCursor)
+		i.prepCursor = false
+		if err != nil {
+			i.err = err
+			return nil, nil
+		}
 
-}
-func (i *indexIter) First() (key []byte, value []byte) {
-	i.currentIndex = 0
-	return i.get()
-}
+		if len(newKeys) == 0 {
+			return nil, nil
+		}
 
-func (i *indexIter) Last() (key []byte, value []byte) {
-	i.currentIndex = (len(i.keys) - 1)
-	return i.get()
-}
-
-func (i *indexIter) Next() (key []byte, value []byte) {
-	if i.currentIndex == (len(i.keys) - 1) {
-		return nil, nil
+		i.keyCache = append(i.keyCache, newKeys...)
 	}
 
-	i.currentIndex++
-	return i.get()
+	nextKey := i.keyCache[0]
+	i.keyCache = i.keyCache[1:]
+
+	val := i.dataBucket.Get(nextKey)
+
+	return nextKey, val
 }
 
-func (i *indexIter) Prev() (key []byte, value []byte) {
-	if i.currentIndex <= 0 {
-		return nil, nil
-	}
-
-	i.currentIndex--
-	return i.get()
+// Error returns the last error, iterator.Next() will not continue if there is an error present
+func (i *iterator) Error() error {
+	return i.err
 }

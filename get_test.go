@@ -100,7 +100,7 @@ func TestFindEqualField(t *testing.T) {
 
 		var result []TestData
 
-		err = store.Find(&result, gobstore.Where("Names").Eq(data.Name))
+		err = store.Find(&result, gobstore.Where("Name").Eq(data.Name))
 
 		if err != nil {
 			t.Fatalf("Error finding data from gobstore: %s", err)

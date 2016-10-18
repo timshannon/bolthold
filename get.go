@@ -76,14 +76,11 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 		elType = elType.Elem()
 	}
 
-	iter, err := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query.index, query.fieldCriteria[query.index])
-	if err != nil {
-		return err
-	}
+	iter := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query)
 
 	newKeys := make(keyList, 0)
 
-	for k, v := iter.First(); k != nil; k, v = iter.Next() {
+	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 		if len(retrievedKeys) != 0 {
 			// don't check this record if it's already been retrieved
 			if retrievedKeys.in(k) {
@@ -93,7 +90,7 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 
 		val := reflect.New(elType)
 
-		err = decode(v, val.Interface())
+		err := decode(v, val.Interface())
 		if err != nil {
 			return err
 		}
@@ -115,13 +112,17 @@ func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrieve
 		}
 	}
 
+	if iter.Error() != nil {
+		return iter.Error()
+	}
+
 	if len(query.ors) > 0 {
 		for i := range newKeys {
 			retrievedKeys.add(newKeys[i])
 		}
 
 		for i := range query.ors {
-			err = s.runQuery(tx, result, query.ors[i], retrievedKeys)
+			err := s.runQuery(tx, result, query.ors[i], retrievedKeys)
 			if err != nil {
 				return err
 			}

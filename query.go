@@ -28,6 +28,7 @@ type Query struct {
 	currentField  string
 	fieldCriteria map[string][]*Criterion
 	ors           []*Query
+	badIndex      bool
 }
 
 // Criterion is an operator and a value that a given field needs to match on
@@ -36,13 +37,6 @@ type Criterion struct {
 	operator     int
 	value        interface{}
 	valueEncoded []byte
-}
-
-type iterator interface {
-	First() (key []byte, value []byte)
-	Last() (key []byte, value []byte)
-	Next() (key []byte, value []byte)
-	Prev() (key []byte, value []byte)
 }
 
 // Where starts a query for specifying the criteria that an object in the gobstore needs to match to
@@ -90,7 +84,7 @@ func (q *Query) Or(query *Query) *Query {
 
 func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) {
 	for field, criteria := range q.fieldCriteria {
-		if field == q.index {
+		if field == q.index && !q.badIndex {
 			// already handled by index Iterator
 			continue
 		}
