@@ -1,3 +1,7 @@
+// Copyright 2016 Tim Shannon. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+
 package gobstore
 
 import (
@@ -189,8 +193,6 @@ func (c *Criterion) test(value []byte) (bool, error) {
 	default:
 		panic("invalid operator")
 	}
-
-	return false, nil
 }
 
 func matchesAllCriteria(criteria []*Criterion, value []byte) (bool, error) {
