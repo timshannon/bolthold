@@ -9,33 +9,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/boltdb/bolt"
 	"github.com/timshannon/boltstore"
 )
 
 func TestOpen(t *testing.T) {
 	filename := tempfile()
-	store, err := boltstore.Open(filename)
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", filename, err)
-	}
-
-	if store == nil {
-		t.Fatalf("store is null!")
-	}
-
-	defer store.Close()
-	defer os.Remove(filename)
-}
-
-func TestFromBolt(t *testing.T) {
-	filename := tempfile()
-	db, err := bolt.Open(filename, 0666, nil)
-	if err != nil {
-		t.Fatalf("Error opening bolt db %s: %s", filename, err)
-	}
-
-	store, err := boltstore.FromBolt(db)
+	store, err := boltstore.Open(filename, 0666, nil)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -75,7 +54,7 @@ func TestReIndex(t *testing.T) {
 // completed.
 func testWrap(t *testing.T, tests func(store *boltstore.Store, t *testing.T)) {
 	filename := tempfile()
-	store, err := boltstore.Open(filename)
+	store, err := boltstore.Open(filename, 0666, nil)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}

@@ -5,9 +5,9 @@
 package boltstore
 
 import (
+	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/boltdb/bolt"
 )
@@ -17,21 +17,45 @@ type Store struct {
 	db *bolt.DB
 }
 
-// Open opens or creates a boltstore file.  It uses a default timeout of 10 seconds, and a filemode of 0666
-func Open(filename string) (*Store, error) {
-	db, err := bolt.Open(filename, 0666, &bolt.Options{Timeout: 10 * time.Second})
+// Options allows you set different options from the defaults
+// For example the encoding and decoding funcs which default to Gob
+type Options struct {
+	Encoder encodeFunc
+	Decoder decodeFunc
+	*bolt.Options
+}
+
+// Open opens or creates a boltstore file.
+func Open(filename string, mode os.FileMode, options *Options) (*Store, error) {
+	options = fillOptions(options)
+
+	encode = options.Encoder
+	decode = options.Decoder
+
+	db, err := bolt.Open(filename, mode, options.Options)
 	if err != nil {
 		return nil, err
 	}
 
-	return FromBolt(db)
-}
-
-// FromBolt returns a boltStore instance based on the already opened Bolt DB
-func FromBolt(db *bolt.DB) (*Store, error) {
 	return &Store{
 		db: db,
 	}, nil
+}
+
+// set any unspecified options to defaults
+func fillOptions(options *Options) *Options {
+	if options == nil {
+		options = &Options{}
+	}
+
+	if options.Encoder == nil {
+		options.Encoder = defaultEncode
+	}
+	if options.Decoder == nil {
+		options.Decoder = defaultDecode
+	}
+
+	return options
 }
 
 // Bolt returns the underlying Bolt DB the boltstore is based on

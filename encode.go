@@ -9,7 +9,13 @@ import (
 	"encoding/gob"
 )
 
-func encode(value interface{}) ([]byte, error) {
+type encodeFunc func(value interface{}) ([]byte, error)
+type decodeFunc func(data []byte, value interface{}) error
+
+var encode encodeFunc
+var decode decodeFunc
+
+func defaultEncode(value interface{}) ([]byte, error) {
 	var buff bytes.Buffer
 
 	en := gob.NewEncoder(&buff)
@@ -22,7 +28,7 @@ func encode(value interface{}) ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
-func decode(data []byte, value interface{}) error {
+func defaultDecode(data []byte, value interface{}) error {
 	var buff bytes.Buffer
 	de := gob.NewDecoder(&buff)
 
