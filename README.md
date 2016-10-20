@@ -1,6 +1,6 @@
-#GobStore
+#BoltStore
 
-GobStore is a simple querying and indexing interface on top of a Bolt DB instance. The goal is to create a simple,
+BoltStore is a simple querying and indexing interface on top of a Bolt DB instance. The goal is to create a simple,
 higher level interface on top of Bolt DB that applies some sane defaults, but exposes the underlying Bolt DB for customizing
 as you wish.  As the name implies the encoding used is Gob, so feel free to *gob.Register* any types you wish, or use the 
 GobEncoder/Decoder interface for faster serialization.
@@ -11,7 +11,7 @@ for encoding and decoding objects and searching through data.  I figure formaliz
 and including tests and benchmarks will, at a minimum, be useful to me.  Maybe it'll be useful to others as well.
 
 ##Indexes
-In every GobStore there will be a reserved bucket *_indexes* which will be used to hold indexes that point back to another
+In every BoltStore there will be a reserved bucket *_indexes* which will be used to hold indexes that point back to another
 bucket's Key system.  Indexes will be defined as functions which will return a GoType and be run against every existing 
 row in a given Bucket, or simple as struct tags defining a particular field as indexable. 
 

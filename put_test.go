@@ -2,17 +2,17 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package gobstore_test
+package boltstore_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/timshannon/gobstore"
+	"github.com/timshannon/boltstore"
 )
 
 func TestInsert(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
 			Name:    "Test Name",
@@ -28,7 +28,7 @@ func TestInsert(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error getting data from boltstore: %s", err)
 		}
 
 		if !data.equal(result) {
@@ -41,15 +41,15 @@ func TestInsert(t *testing.T) {
 			Created: time.Now(),
 		})
 
-		if err != gobstore.ErrKeyExists {
-			t.Fatalf("Insert didn't fail! Expected %s got %s", gobstore.ErrKeyExists, err)
+		if err != boltstore.ErrKeyExists {
+			t.Fatalf("Insert didn't fail! Expected %s got %s", boltstore.ErrKeyExists, err)
 		}
 
 	})
 }
 
 func TestUpdate(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
 			Name:    "Test Name",
@@ -57,8 +57,8 @@ func TestUpdate(t *testing.T) {
 		}
 
 		err := store.Update(key, data)
-		if err != gobstore.ErrNotFound {
-			t.Fatalf("Update without insert didn't fail! Expected %s got %s", gobstore.ErrNotFound, err)
+		if err != boltstore.ErrNotFound {
+			t.Fatalf("Update without insert didn't fail! Expected %s got %s", boltstore.ErrNotFound, err)
 		}
 
 		err = store.Insert(key, data)
@@ -70,7 +70,7 @@ func TestUpdate(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error getting data from boltstore: %s", err)
 		}
 
 		if !data.equal(result) {
@@ -91,7 +91,7 @@ func TestUpdate(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error getting data from boltstore: %s", err)
 		}
 
 		if !result.equal(update) {
@@ -102,7 +102,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestUpsert(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
 			Name:    "Test Name",
@@ -118,7 +118,7 @@ func TestUpsert(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error getting data from boltstore: %s", err)
 		}
 
 		if !data.equal(result) {
@@ -139,7 +139,7 @@ func TestUpsert(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from gobstore: %s", err)
+			t.Fatalf("Error getting data from boltstore: %s", err)
 		}
 
 		if !result.equal(update) {

@@ -2,20 +2,20 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package gobstore_test
+package boltstore_test
 
 import (
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/timshannon/gobstore"
+	"github.com/timshannon/boltstore"
 )
 
 type ItemTest struct {
 	ID       int
 	Name     string
-	Category string `gobstoreIndex:"Category"`
+	Category string `boltstoreIndex:"Category"`
 	Created  time.Time
 }
 
@@ -124,7 +124,7 @@ var testData = []ItemTest{
 	},
 }
 
-func insertTestData(t *testing.T, store *gobstore.Store) {
+func insertTestData(t *testing.T, store *boltstore.Store) {
 	for i := range testData {
 		err := store.Insert(testData[i].key(), testData[i])
 		if err != nil {
@@ -134,17 +134,17 @@ func insertTestData(t *testing.T, store *gobstore.Store) {
 }
 
 func TestFindEqualKey(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		insertTestData(t, store)
 
 		want := testData[4]
 
 		var result []ItemTest
 
-		err := store.Find(&result, gobstore.Where(gobstore.Key()).Eq(want.key()))
+		err := store.Find(&result, boltstore.Where(boltstore.Key()).Eq(want.key()))
 
 		if err != nil {
-			t.Fatalf("Error finding data from gobstore: %s", err)
+			t.Fatalf("Error finding data from boltstore: %s", err)
 		}
 
 		if len(result) != 1 {
@@ -158,17 +158,17 @@ func TestFindEqualKey(t *testing.T) {
 }
 
 func TestFindEqualFieldNoIndex(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		insertTestData(t, store)
 
 		want := testData[1]
 
 		var result []ItemTest
 
-		err := store.Find(&result, gobstore.Where("Name").Eq(want.Name))
+		err := store.Find(&result, boltstore.Where("Name").Eq(want.Name))
 
 		if err != nil {
-			t.Fatalf("Error finding data from gobstore: %s", err)
+			t.Fatalf("Error finding data from boltstore: %s", err)
 		}
 
 		if len(result) != 1 {
@@ -179,5 +179,31 @@ func TestFindEqualFieldNoIndex(t *testing.T) {
 			t.Fatalf("Got %v wanted %v.", result[0], want)
 		}
 
+	})
+}
+
+func TestFindEqualFieldIndex(t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		var result []ItemTest
+
+		cat := "vehicle"
+
+		err := store.Find(&result, boltstore.Where("Category").Eq(cat))
+
+		if err != nil {
+			t.Fatalf("Error finding data from boltstore: %s", err)
+		}
+
+		if len(result) != 5 {
+			t.Fatalf("Find result count is %d wanted %d", len(result), 5)
+		}
+
+		for i := range result {
+			if result[i].Category != cat {
+				t.Fatalf("Result %s is not of the category %s", result[i].key(), cat)
+			}
+		}
 	})
 }

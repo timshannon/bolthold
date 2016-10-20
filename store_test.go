@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package gobstore_test
+package boltstore_test
 
 import (
 	"io/ioutil"
@@ -10,12 +10,12 @@ import (
 	"testing"
 
 	"github.com/boltdb/bolt"
-	"github.com/timshannon/gobstore"
+	"github.com/timshannon/boltstore"
 )
 
 func TestOpen(t *testing.T) {
 	filename := tempfile()
-	store, err := gobstore.Open(filename)
+	store, err := boltstore.Open(filename)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -35,7 +35,7 @@ func TestFromBolt(t *testing.T) {
 		t.Fatalf("Error opening bolt db %s: %s", filename, err)
 	}
 
-	store, err := gobstore.FromBolt(db)
+	store, err := boltstore.FromBolt(db)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -49,22 +49,22 @@ func TestFromBolt(t *testing.T) {
 }
 
 func TestBolt(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		b := store.Bolt()
 		if b == nil {
-			t.Fatalf("Bolt is null in gobstore")
+			t.Fatalf("Bolt is null in boltstore")
 		}
 	})
 }
 
 func TestRemoveIndex(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		//TODO
 	})
 }
 
 func TestReIndex(t *testing.T) {
-	testWrap(t, func(store *gobstore.Store, t *testing.T) {
+	testWrap(t, func(store *boltstore.Store, t *testing.T) {
 		//TODO
 	})
 }
@@ -73,9 +73,9 @@ func TestReIndex(t *testing.T) {
 
 // testWrap creates a temporary database for testing and closes and cleans it up when
 // completed.
-func testWrap(t *testing.T, tests func(store *gobstore.Store, t *testing.T)) {
+func testWrap(t *testing.T, tests func(store *boltstore.Store, t *testing.T)) {
 	filename := tempfile()
-	store, err := gobstore.Open(filename)
+	store, err := boltstore.Open(filename)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -92,7 +92,7 @@ func testWrap(t *testing.T, tests func(store *gobstore.Store, t *testing.T)) {
 
 // tempfile returns a temporary file path.
 func tempfile() string {
-	f, err := ioutil.TempFile("", "gobstore-")
+	f, err := ioutil.TempFile("", "boltstore-")
 	if err != nil {
 		panic(err)
 	}

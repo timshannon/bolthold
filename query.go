@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package gobstore
+package boltstore
 
 import (
 	"bytes"
@@ -20,13 +20,13 @@ const (
 	le        // <=
 )
 
-// Key is shorthand for specifying a query to run again the Key in a gobstore, simply returns ""
-// Where(gobstore.Key()).Eq("testkey")
+// Key is shorthand for specifying a query to run again the Key in a boltstore, simply returns ""
+// Where(boltstore.Key()).Eq("testkey")
 func Key() string {
 	return ""
 }
 
-// Query is a chained collection of criteria of which an object in the gobstore needs to match to be returned
+// Query is a chained collection of criteria of which an object in the boltstore needs to match to be returned
 type Query struct {
 	index         string
 	currentField  string
@@ -43,7 +43,7 @@ type Criterion struct {
 	valueEncoded []byte
 }
 
-// Where starts a query for specifying the criteria that an object in the gobstore needs to match to
+// Where starts a query for specifying the criteria that an object in the boltstore needs to match to
 // be returned in a Find result
 /*
 	Query API Example
@@ -56,7 +56,7 @@ type Criterion struct {
 */
 func Where(field string) *Criterion {
 	if !startsUpper(field) {
-		panic("The first letter of a field in a gobstore query must be upper-case")
+		panic("The first letter of a field in a boltstore query must be upper-case")
 	}
 
 	return &Criterion{
@@ -71,7 +71,7 @@ func Where(field string) *Criterion {
 // And creates a nother set of criterion the needs to apply to a query
 func (q *Query) And(field string) *Criterion {
 	if !startsUpper(field) {
-		panic("The first letter of a field in a gobstore query must be upper-case")
+		panic("The first letter of a field in a boltstore query must be upper-case")
 	}
 
 	q.currentField = field

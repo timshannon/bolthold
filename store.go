@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package gobstore
+package boltstore
 
 import (
 	"reflect"
@@ -12,12 +12,12 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// Store is a gobstore wrapper around a bolt DB
+// Store is a boltstore wrapper around a bolt DB
 type Store struct {
 	db *bolt.DB
 }
 
-// Open opens or creates a gobstore file.  It uses a default timeout of 10 seconds, and a filemode of 0666
+// Open opens or creates a boltstore file.  It uses a default timeout of 10 seconds, and a filemode of 0666
 func Open(filename string) (*Store, error) {
 	db, err := bolt.Open(filename, 0666, &bolt.Options{Timeout: 10 * time.Second})
 	if err != nil {
@@ -27,14 +27,14 @@ func Open(filename string) (*Store, error) {
 	return FromBolt(db)
 }
 
-// FromBolt returns a GobStore instance based on the already opened Bolt DB
+// FromBolt returns a boltStore instance based on the already opened Bolt DB
 func FromBolt(db *bolt.DB) (*Store, error) {
 	return &Store{
 		db: db,
 	}, nil
 }
 
-// Bolt returns the underlying Bolt DB the gobstore is based on
+// Bolt returns the underlying Bolt DB the boltstore is based on
 func (s *Store) Bolt() *bolt.DB {
 	return s.db
 }
@@ -47,7 +47,7 @@ func (s *Store) Close() error {
 // ReIndex removes any existing indexes and adds all the indexes defined by the passed in datatype example
 // This function allows you to index an already existing boltDB file, or refresh any missing indexes
 // if bucketName is nil, then we'll assume a bucketName of storer.Type()
-// if a bucketname is specified, then the data will be copied to the gobstore standard bucket of storer.Type()
+// if a bucketname is specified, then the data will be copied to the boltstore standard bucket of storer.Type()
 func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 	storer := newStorer(exampleType)
 
@@ -107,7 +107,7 @@ func (s *Store) RemoveIndex(storer Storer, indexName string) error {
 	})
 }
 
-// Storer is the Interface to implement to skip reflect calls on all data passed into the gobstore
+// Storer is the Interface to implement to skip reflect calls on all data passed into the boltstore
 type Storer interface {
 	Type() string              // used as the boltdb bucket name
 	Indexes() map[string]Index //[indexname]indexFunc
@@ -155,12 +155,12 @@ func newStorer(dataType interface{}) Storer {
 	}
 
 	if storer.rType.Kind() != reflect.Struct {
-		panic("Invalid Type for Storer.  Gobstore only works with structs")
+		panic("Invalid Type for Storer.  Boltstore only works with structs")
 	}
 
 	for i := 0; i < storer.rType.NumField(); i++ {
-		if strings.Contains(string(storer.rType.Field(i).Tag), GobStoreIndexTag) {
-			indexName := storer.rType.Field(i).Tag.Get(GobStoreIndexTag)
+		if strings.Contains(string(storer.rType.Field(i).Tag), BoltStoreIndexTag) {
+			indexName := storer.rType.Field(i).Tag.Get(BoltStoreIndexTag)
 
 			if indexName != "" {
 				indexName = storer.rType.Field(i).Name
