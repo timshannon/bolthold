@@ -21,7 +21,7 @@ const (
 )
 
 // Key is shorthand for specifying a query to run again the Key in a gobstore, simply returns ""
-// Where(Key()).Eq("testkey")
+// Where(gobstore.Key()).Eq("testkey")
 func Key() string {
 	return ""
 }

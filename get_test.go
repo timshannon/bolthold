@@ -14,16 +14,16 @@ import (
 func TestGet(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
-		data := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 		err := store.Insert(key, data)
 		if err != nil {
 			t.Fatalf("Error creating data for get test: %s", err)
 		}
 
-		result := &TestData{}
+		result := &ItemTest{}
 
 		err = store.Get(key, result)
 		if err != nil {

@@ -23,7 +23,7 @@ func (i *ItemTest) key() string {
 	return strconv.Itoa(i.ID) + "_" + i.Name
 }
 
-func (i *ItemTest) equal(other ItemTest) bool {
+func (i *ItemTest) equal(other *ItemTest) bool {
 	if i.ID != other.ID {
 		return false
 	}
@@ -58,9 +58,9 @@ var testData = []ItemTest{
 	},
 	ItemTest{
 		ID:       2,
-		Name:     "van",
-		Category: "vehicle",
-		Created:  time.Now().AddDate(0, 30, 0),
+		Name:     "seal",
+		Category: "animal",
+		Created:  time.Now().AddDate(-1, 0, 0),
 	},
 	ItemTest{
 		ID:       3,
@@ -69,16 +69,58 @@ var testData = []ItemTest{
 		Created:  time.Now().AddDate(0, 30, 0),
 	},
 	ItemTest{
-		ID:       4,
-		Name:     "van",
-		Category: "vehicle",
+		ID:       8,
+		Name:     "pizza",
+		Category: "food",
+		Created:  time.Now(),
+	},
+	ItemTest{
+		ID:       1,
+		Name:     "crow",
+		Category: "animal",
 		Created:  time.Now(),
 	},
 	ItemTest{
 		ID:       5,
 		Name:     "van",
 		Category: "vehicle",
-		Created:  time.Now().AddDate(0, 30, 0),
+		Created:  time.Now(),
+	},
+	ItemTest{
+		ID:       5,
+		Name:     "pizza",
+		Category: "food",
+		Created:  time.Now(),
+	},
+	ItemTest{
+		ID:       6,
+		Name:     "lion",
+		Category: "animal",
+		Created:  time.Now().AddDate(3, 0, 0),
+	},
+	ItemTest{
+		ID:       7,
+		Name:     "bear",
+		Category: "animal",
+		Created:  time.Now().AddDate(3, 0, 0),
+	},
+	ItemTest{
+		ID:       9,
+		Name:     "tacos",
+		Category: "food",
+		Created:  time.Now().AddDate(-3, 0, 0),
+	},
+	ItemTest{
+		ID:       10,
+		Name:     "golf cart",
+		Category: "vehicle",
+		Created:  time.Now().AddDate(0, 0, 30),
+	},
+	ItemTest{
+		ID:       11,
+		Name:     "oatmeal",
+		Category: "food",
+		Created:  time.Now().AddDate(0, 0, -30),
 	},
 }
 
@@ -109,7 +151,7 @@ func TestFindEqualKey(t *testing.T) {
 			t.Fatalf("Find result count is %d wanted %d", len(result), 1)
 		}
 
-		if !result[0].equal(want) {
+		if !result[0].equal(&want) {
 			t.Fatalf("Got %v wanted %v.", result[0], want)
 		}
 	})
@@ -133,7 +175,7 @@ func TestFindEqualFieldNoIndex(t *testing.T) {
 			t.Fatalf("Find result count is %d wanted %d", len(result), 1)
 		}
 
-		if !result[0].equal(want) {
+		if !result[0].equal(&want) {
 			t.Fatalf("Got %v wanted %v.", result[0], want)
 		}
 

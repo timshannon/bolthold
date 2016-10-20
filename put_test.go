@@ -14,9 +14,9 @@ import (
 func TestInsert(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
-		data := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 
 		err := store.Insert(key, data)
@@ -24,7 +24,7 @@ func TestInsert(t *testing.T) {
 			t.Fatalf("Error inserting data for test: %s", err)
 		}
 
-		result := &TestData{}
+		result := &ItemTest{}
 
 		err = store.Get(key, result)
 		if err != nil {
@@ -36,9 +36,9 @@ func TestInsert(t *testing.T) {
 		}
 
 		// test duplicate insert
-		err = store.Insert(key, &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		err = store.Insert(key, &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		})
 
 		if err != gobstore.ErrKeyExists {
@@ -51,9 +51,9 @@ func TestInsert(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
-		data := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 
 		err := store.Update(key, data)
@@ -66,7 +66,7 @@ func TestUpdate(t *testing.T) {
 			t.Fatalf("Error creating data for update test: %s", err)
 		}
 
-		result := &TestData{}
+		result := &ItemTest{}
 
 		err = store.Get(key, result)
 		if err != nil {
@@ -77,9 +77,9 @@ func TestUpdate(t *testing.T) {
 			t.Fatalf("Got %s wanted %s.", result, data)
 		}
 
-		update := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		update := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 
 		// test duplicate insert
@@ -104,9 +104,9 @@ func TestUpdate(t *testing.T) {
 func TestUpsert(t *testing.T) {
 	testWrap(t, func(store *gobstore.Store, t *testing.T) {
 		key := "testKey"
-		data := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 
 		err := store.Upsert(key, data)
@@ -114,7 +114,7 @@ func TestUpsert(t *testing.T) {
 			t.Fatalf("Error upserting data: %s", err)
 		}
 
-		result := &TestData{}
+		result := &ItemTest{}
 
 		err = store.Get(key, result)
 		if err != nil {
@@ -125,9 +125,9 @@ func TestUpsert(t *testing.T) {
 			t.Fatalf("Got %s wanted %s.", result, data)
 		}
 
-		update := &TestData{
-			Name: "Test Name",
-			Time: time.Now(),
+		update := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
 		}
 
 		// test duplicate insert

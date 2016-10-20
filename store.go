@@ -167,7 +167,12 @@ func newStorer(dataType interface{}) Storer {
 			}
 
 			storer.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
-				return encode(reflect.ValueOf(value).FieldByName(name).Interface())
+				tp := reflect.ValueOf(value)
+				for tp.Kind() == reflect.Ptr {
+					tp = tp.Elem()
+				}
+
+				return encode(tp.FieldByName(name).Interface())
 			}
 		}
 	}

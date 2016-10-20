@@ -7,69 +7,26 @@ package gobstore
 import (
 	"bytes"
 	"encoding/gob"
-	"sync"
 )
 
-var encodePool, decodePool sync.Pool
-
-func init() {
-	encodePool = sync.Pool{
-		New: func() interface{} {
-			var buff bytes.Buffer
-			return &encoder{
-				buffer:  &buff,
-				Encoder: gob.NewEncoder(&buff),
-			}
-		},
-	}
-
-	decodePool = sync.Pool{
-		New: func() interface{} {
-			var buff bytes.Buffer
-			return &decoder{
-				buffer:  &buff,
-				Decoder: gob.NewDecoder(&buff),
-			}
-		},
-	}
-
-}
-
-type encoder struct {
-	buffer *bytes.Buffer
-	*gob.Encoder
-}
-
-type decoder struct {
-	buffer *bytes.Buffer
-	*gob.Decoder
-}
-
 func encode(value interface{}) ([]byte, error) {
-	en := encodePool.Get().(*encoder)
-	defer encodePool.Put(en)
+	var buff bytes.Buffer
 
-	en.buffer.Reset()
+	en := gob.NewEncoder(&buff)
 
 	err := en.Encode(value)
 	if err != nil {
 		return nil, err
 	}
 
-	rtn := make([]byte, en.buffer.Len())
-
-	copy(rtn, en.buffer.Bytes())
-
-	return rtn, nil
+	return buff.Bytes(), nil
 }
 
 func decode(data []byte, value interface{}) error {
-	de := decodePool.Get().(*decoder)
-	defer decodePool.Put(de)
+	var buff bytes.Buffer
+	de := gob.NewDecoder(&buff)
 
-	de.buffer.Reset()
-
-	_, err := de.buffer.Write(data)
+	_, err := buff.Write(data)
 	if err != nil {
 		return err
 	}

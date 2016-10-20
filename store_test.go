@@ -5,11 +5,9 @@
 package gobstore_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/timshannon/gobstore"
@@ -105,25 +103,4 @@ func tempfile() string {
 		panic(err)
 	}
 	return f.Name()
-}
-
-type TestData struct {
-	Name string
-	Time time.Time
-}
-
-func (d *TestData) equal(other *TestData) bool {
-	if d.Name != other.Name {
-		return false
-	}
-
-	if !d.Time.Equal(other.Time) {
-		return false
-	}
-
-	return true
-}
-
-func (d *TestData) String() string {
-	return fmt.Sprintf("Name: %s \n Time: %s", d.Name, d.Time)
 }

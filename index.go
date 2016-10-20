@@ -16,8 +16,6 @@ const GobStoreIndexTag = "gobstoreIndex"
 
 const indexBucketPrefix = "_index"
 
-const keyIndex = ""
-
 // size of iterator keys stored in memory before more are fetched
 const iteratorKeyMinCacheSize = 100
 
@@ -192,14 +190,11 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 				if ok {
 					nKeys = append(nKeys, k)
 				}
-
 			}
 			return nKeys, nil
-
 		}
 
 		return iter
-
 	}
 
 	iBucket := tx.Bucket(indexBucketName(typeName, query.index))
