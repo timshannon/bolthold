@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore
+package bolthold
 
 import (
 	"errors"
@@ -11,10 +11,10 @@ import (
 )
 
 // ErrKeyExists is the error returned when data is being Inserted for a Key that already exists
-var ErrKeyExists = errors.New("This Key already exists in this boltstore for this type")
+var ErrKeyExists = errors.New("This Key already exists in this bolthold for this type")
 
-// Insert inserts the passed in data into the the boltStore
-// If the the key already exists in the boltstore, then an ErrKeyExists is returned
+// Insert inserts the passed in data into the the bolthold
+// If the the key already exists in the bolthold, then an ErrKeyExists is returned
 func (s *Store) Insert(key, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return s.TxInsert(tx, key, data)
@@ -65,7 +65,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	return nil
 }
 
-// Update updates an existing record in the boltStore
+// Update updates an existing record in the bolthold
 // if the Key doesn't already exist in the store, then it fails with ErrNotFound
 func (s *Store) Update(key interface{}, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
@@ -121,7 +121,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	return nil
 }
 
-// Upsert inserts the record into the boltstore if it doesn't exist.  If it does already exist, then it updates
+// Upsert inserts the record into the bolthold if it doesn't exist.  If it does already exist, then it updates
 // the existing record
 func (s *Store) Upsert(key interface{}, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {

@@ -2,19 +2,19 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore_test
+package bolthold_test
 
 import (
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/timshannon/boltstore"
+	"github.com/timshannon/bolthold"
 )
 
 func TestOpen(t *testing.T) {
 	filename := tempfile()
-	store, err := boltstore.Open(filename, 0666, nil)
+	store, err := bolthold.Open(filename, 0666, nil)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -28,22 +28,22 @@ func TestOpen(t *testing.T) {
 }
 
 func TestBolt(t *testing.T) {
-	testWrap(t, func(store *boltstore.Store, t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		b := store.Bolt()
 		if b == nil {
-			t.Fatalf("Bolt is null in boltstore")
+			t.Fatalf("Bolt is null in bolthold")
 		}
 	})
 }
 
 func TestRemoveIndex(t *testing.T) {
-	testWrap(t, func(store *boltstore.Store, t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		//TODO
 	})
 }
 
 func TestReIndex(t *testing.T) {
-	testWrap(t, func(store *boltstore.Store, t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		//TODO
 	})
 }
@@ -52,9 +52,9 @@ func TestReIndex(t *testing.T) {
 
 // testWrap creates a temporary database for testing and closes and cleans it up when
 // completed.
-func testWrap(t *testing.T, tests func(store *boltstore.Store, t *testing.T)) {
+func testWrap(t *testing.T, tests func(store *bolthold.Store, t *testing.T)) {
 	filename := tempfile()
-	store, err := boltstore.Open(filename, 0666, nil)
+	store, err := bolthold.Open(filename, 0666, nil)
 	if err != nil {
 		t.Fatalf("Error opening %s: %s", filename, err)
 	}
@@ -71,7 +71,7 @@ func testWrap(t *testing.T, tests func(store *boltstore.Store, t *testing.T)) {
 
 // tempfile returns a temporary file path.
 func tempfile() string {
-	f, err := ioutil.TempFile("", "boltstore-")
+	f, err := ioutil.TempFile("", "bolthold-")
 	if err != nil {
 		panic(err)
 	}

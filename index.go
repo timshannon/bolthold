@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore
+package bolthold
 
 import (
 	"bytes"
@@ -11,8 +11,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// BoltStoreIndexTag is the struct tag used to define an a field as indexable for a boltstore
-const BoltStoreIndexTag = "boltstoreIndex"
+// BoltHoldIndexTag is the struct tag used to define an a field as indexable for a bolthold
+const BoltHoldIndexTag = "boltholdIndex"
 
 const indexBucketPrefix = "_index"
 

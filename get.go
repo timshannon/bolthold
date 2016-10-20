@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore
+package bolthold
 
 import (
 	"errors"
@@ -14,14 +14,14 @@ import (
 // ErrNotFound is the error returned no data is found for the given key
 var ErrNotFound = errors.New("No data found for this key")
 
-// Get retrieves a value from the boltstore and puts it into result
+// Get retrieves a value from the bolthold and puts it into result
 func (s *Store) Get(key, result interface{}) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
 		return s.TxGet(tx, key, result)
 	})
 }
 
-// TxGet allows you to pass in your own bolt transaction to retrieve a value from the boltstore and puts it into result
+// TxGet allows you to pass in your own bolt transaction to retrieve a value from the bolthold and puts it into result
 func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
 	storer := newStorer(result)
 
@@ -45,7 +45,7 @@ func (s *Store) exists(tx *bolt.Tx, key []byte, storer Storer) bool {
 	return (tx.Bucket([]byte(storer.Type())).Get(key) != nil)
 }
 
-// Find retrieves a set of values from the boltstore that matches the passed in query
+// Find retrieves a set of values from the bolthold that matches the passed in query
 // result must be a pointer to a slice
 func (s *Store) Find(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
@@ -53,7 +53,7 @@ func (s *Store) Find(result interface{}, query *Query) error {
 	})
 }
 
-// TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the boltstore
+// TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the bolthold
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 	return s.runQuery(tx, result, query, nil)
 }

@@ -2,17 +2,17 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore_test
+package bolthold_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/timshannon/boltstore"
+	"github.com/timshannon/bolthold"
 )
 
 func TestGet(t *testing.T) {
-	testWrap(t, func(store *boltstore.Store, t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
 			Name:    "Test Name",
@@ -27,7 +27,7 @@ func TestGet(t *testing.T) {
 
 		err = store.Get(key, result)
 		if err != nil {
-			t.Fatalf("Error getting data from boltstore: %s", err)
+			t.Fatalf("Error getting data from bolthold: %s", err)
 		}
 
 		if !data.equal(result) {

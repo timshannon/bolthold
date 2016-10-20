@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package boltstore
+package bolthold
 
 import (
 	"os"
@@ -12,7 +12,7 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// Store is a boltstore wrapper around a bolt DB
+// Store is a bolthold wrapper around a bolt DB
 type Store struct {
 	db *bolt.DB
 }
@@ -25,7 +25,7 @@ type Options struct {
 	*bolt.Options
 }
 
-// Open opens or creates a boltstore file.
+// Open opens or creates a bolthold file.
 func Open(filename string, mode os.FileMode, options *Options) (*Store, error) {
 	options = fillOptions(options)
 
@@ -58,7 +58,7 @@ func fillOptions(options *Options) *Options {
 	return options
 }
 
-// Bolt returns the underlying Bolt DB the boltstore is based on
+// Bolt returns the underlying Bolt DB the bolthold is based on
 func (s *Store) Bolt() *bolt.DB {
 	return s.db
 }
@@ -71,7 +71,7 @@ func (s *Store) Close() error {
 // ReIndex removes any existing indexes and adds all the indexes defined by the passed in datatype example
 // This function allows you to index an already existing boltDB file, or refresh any missing indexes
 // if bucketName is nil, then we'll assume a bucketName of storer.Type()
-// if a bucketname is specified, then the data will be copied to the boltstore standard bucket of storer.Type()
+// if a bucketname is specified, then the data will be copied to the bolthold standard bucket of storer.Type()
 func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 	storer := newStorer(exampleType)
 
@@ -131,7 +131,7 @@ func (s *Store) RemoveIndex(storer Storer, indexName string) error {
 	})
 }
 
-// Storer is the Interface to implement to skip reflect calls on all data passed into the boltstore
+// Storer is the Interface to implement to skip reflect calls on all data passed into the bolthold
 type Storer interface {
 	Type() string              // used as the boltdb bucket name
 	Indexes() map[string]Index //[indexname]indexFunc
@@ -179,12 +179,12 @@ func newStorer(dataType interface{}) Storer {
 	}
 
 	if storer.rType.Kind() != reflect.Struct {
-		panic("Invalid Type for Storer.  Boltstore only works with structs")
+		panic("Invalid Type for Storer.  BoltHold only works with structs")
 	}
 
 	for i := 0; i < storer.rType.NumField(); i++ {
-		if strings.Contains(string(storer.rType.Field(i).Tag), BoltStoreIndexTag) {
-			indexName := storer.rType.Field(i).Tag.Get(BoltStoreIndexTag)
+		if strings.Contains(string(storer.rType.Field(i).Tag), BoltHoldIndexTag) {
+			indexName := storer.rType.Field(i).Tag.Get(BoltHoldIndexTag)
 
 			if indexName != "" {
 				indexName = storer.rType.Field(i).Name
