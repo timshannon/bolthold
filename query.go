@@ -5,7 +5,6 @@
 package bolthold
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
 	"unicode"
@@ -18,7 +17,10 @@ const (
 	lt        // <
 	ge        // >=
 	le        // <=
+	in
 )
+
+//TODO: full text searching index with bleve
 
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
 // Where(bolthold.Key()).Eq("testkey")
@@ -37,10 +39,14 @@ type Query struct {
 
 // Criterion is an operator and a value that a given field needs to match on
 type Criterion struct {
-	query        *Query
-	operator     int
-	value        interface{}
-	valueEncoded []byte
+	query    *Query
+	operator int
+	value    interface{}
+	inValues []interface{}
+
+	// ensures that the values in the criteria are only encoded once
+	encodeCache  []byte
+	inEncodeCase [][]byte
 }
 
 // Where starts a query for specifying the criteria that an object in the bolthold needs to match to
@@ -94,7 +100,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) 
 		}
 
 		if field == Key() {
-			ok, err := matchesAllCriteria(criteria, key)
+			ok, err := matchesAllCriteria(criteria, key, true)
 			if err != nil {
 				return false, err
 			}
@@ -105,15 +111,13 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) 
 			continue
 		}
 
+		//TODO: Allow deep names. struct1.field1.fieldChild
 		fVal := value.Elem().FieldByName(field)
 		if !fVal.IsValid() {
 			return false, fmt.Errorf("The field %s does not exist in the type %s", field, value)
 		}
-		fBts, err := encode(fVal.Interface())
-		if err != nil {
-			return false, err
-		}
-		ok, err := matchesAllCriteria(criteria, fBts)
+
+		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false)
 		if err != nil {
 			return false, err
 		}
@@ -165,18 +169,39 @@ func (c *Criterion) Le(value interface{}) *Query {
 	return c.op(le, value)
 }
 
+// In test if the current field is a member of the slice of values passed in
+func (c *Criterion) In(values ...interface{}) *Query {
+	c.operator = in
+	c.inValues = values
+
+	q := c.query
+	q.fieldCriteria[q.currentField] = append(q.fieldCriteria[q.currentField], c)
+
+	return q
+}
+
 // test if the criterion passes with the passed in value
-func (c *Criterion) test(value []byte) (bool, error) {
-	if c.valueEncoded == nil {
-		d, err := encode(c.value)
+func (c *Criterion) test(value interface{}, encoded bool) (bool, error) {
+	if encoded {
+		// used with keys
+		decVal := reflect.New(reflect.TypeOf(c.value))
+		err := decode(value.([]byte), decVal.Interface())
 		if err != nil {
 			return false, err
 		}
 
-		c.valueEncoded = d
+		value = decVal
 	}
 
-	result := bytes.Compare(value, c.valueEncoded)
+	if c.operator == in {
+		panic("TODO")
+	}
+
+	result, err := c.compare(value, c.value)
+	if err != nil {
+		return false, err
+	}
+
 	switch c.operator {
 	case eq:
 		return result == 0, nil
@@ -195,9 +220,9 @@ func (c *Criterion) test(value []byte) (bool, error) {
 	}
 }
 
-func matchesAllCriteria(criteria []*Criterion, value []byte) (bool, error) {
+func matchesAllCriteria(criteria []*Criterion, value interface{}, encoded bool) (bool, error) {
 	for i := range criteria {
-		ok, err := criteria[i].test(value)
+		ok, err := criteria[i].test(value, encoded)
 		if err != nil {
 			return false, err
 		}
@@ -245,6 +270,8 @@ func (q *Query) String() string {
 				s += "<="
 			case ge:
 				s += ">="
+			case in:
+				s += "in"
 			default:
 				panic("invalid operator")
 			}

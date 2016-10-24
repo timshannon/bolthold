@@ -30,6 +30,7 @@ s.Find(Where("Name").Eq("Tim Shannon").And("DOB").Lt(time.Now()).Or(Where("Title
 ## Bucket Layout
 One Go Type will have one bucket, and multiple index buckets.  You can skip all of reflect calls by implementing the 
 *Storer* interface.
+You can query custom types by implementing the Comparer inteface on them
 
 ## Behavior Changes
 Since this will be a higher level interface, there will also be some helper functions.  Instead of *Put*, you'll have the

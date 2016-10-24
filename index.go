@@ -182,7 +182,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 					return nKeys, nil
 				}
 
-				ok, err := matchesAllCriteria(criteria, k)
+				ok, err := matchesAllCriteria(criteria, k, true)
 				if err != nil {
 					return nil, err
 				}
@@ -244,7 +244,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			if k == nil {
 				return nKeys, nil
 			}
-			ok, err := matchesAllCriteria(criteria, k)
+			ok, err := matchesAllCriteria(criteria, k, true)
 			if err != nil {
 				return nil, err
 			}
