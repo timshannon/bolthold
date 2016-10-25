@@ -7,6 +7,7 @@ package bolthold
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"unicode"
 )
 
@@ -18,9 +19,9 @@ const (
 	ge        // >=
 	le        // <=
 	in
+	re // regular expression
+	fn // func
 )
-
-//TODO: full text searching index with bleve
 
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
 // Where(bolthold.Key()).Eq("testkey")
@@ -180,6 +181,20 @@ func (c *Criterion) In(values ...interface{}) *Query {
 	return q
 }
 
+// RegExp will test if a field matches against the regular expression
+// The Field Value will be converted to string (%s) before testing
+func (c *Criterion) RegExp(expression *regexp.Regexp) *Query {
+	return c.op(re, expression)
+}
+
+// MatchFunc is a function used to test an arbitrary matching value in a query
+type MatchFunc func(field interface{}) (bool, error)
+
+// MatchFunc will test if a field matches the passed in function
+func (c *Criterion) MatchFunc(match MatchFunc) *Query {
+	return c.op(fn, match)
+}
+
 // test if the criterion passes with the passed in value
 func (c *Criterion) test(value interface{}, encoded bool) (bool, error) {
 	if encoded {
@@ -193,30 +208,45 @@ func (c *Criterion) test(value interface{}, encoded bool) (bool, error) {
 		value = decVal
 	}
 
-	if c.operator == in {
-		panic("TODO")
-	}
-
-	result, err := c.compare(value, c.value)
-	if err != nil {
-		return false, err
-	}
-
 	switch c.operator {
-	case eq:
-		return result == 0, nil
-	case ne:
-		return result != 0, nil
-	case gt:
-		return result > 0, nil
-	case lt:
-		return result < 0, nil
-	case le:
-		return result < 0 || result == 0, nil
-	case ge:
-		return result > 0 || result == 0, nil
+	case in:
+		for i := range c.inValues {
+			result, err := c.compare(value, c.inValues[i])
+			if err != nil {
+				return false, err
+			}
+			if result == 0 {
+				return true, nil
+			}
+		}
+
+		return false, nil
+	case re:
+		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
+	case fn:
+		return c.value.(MatchFunc)(value)
 	default:
-		panic("invalid operator")
+		result, err := c.compare(value, c.value)
+		if err != nil {
+			return false, err
+		}
+
+		switch c.operator {
+		case eq:
+			return result == 0, nil
+		case ne:
+			return result != 0, nil
+		case gt:
+			return result > 0, nil
+		case lt:
+			return result < 0, nil
+		case le:
+			return result < 0 || result == 0, nil
+		case ge:
+			return result > 0 || result == 0, nil
+		default:
+			panic("invalid operator")
+		}
 	}
 }
 

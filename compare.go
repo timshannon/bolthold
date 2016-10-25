@@ -291,7 +291,7 @@ func (c *Criterion) compare(value, other interface{}) (int, error) {
 	case Comparer:
 		return value.(Comparer).Compare(other)
 	default:
-		if c.encodeCache == nil {
+		if c.encodeCache == nil || c.operator == in {
 			d, err := encode(c.value)
 			if err != nil {
 				return 0, err
