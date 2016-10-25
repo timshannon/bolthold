@@ -44,10 +44,6 @@ type Criterion struct {
 	operator int
 	value    interface{}
 	inValues []interface{}
-
-	// ensures that the values in the criteria are only encoded once
-	encodeCache  []byte
-	inEncodeCase [][]byte
 }
 
 // Where starts a query for specifying the criteria that an object in the bolthold needs to match to
@@ -196,16 +192,18 @@ func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 }
 
 // test if the criterion passes with the passed in value
-func (c *Criterion) test(value interface{}, encoded bool) (bool, error) {
+func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
+	var value interface{}
 	if encoded {
 		// used with keys
-		decVal := reflect.New(reflect.TypeOf(c.value))
-		err := decode(value.([]byte), decVal.Interface())
+		value = reflect.New(reflect.TypeOf(c.value)).Interface()
+		err := decode(testValue.([]byte), value)
 		if err != nil {
 			return false, err
 		}
 
-		value = decVal
+	} else {
+		value = testValue
 	}
 
 	switch c.operator {
@@ -226,6 +224,7 @@ func (c *Criterion) test(value interface{}, encoded bool) (bool, error) {
 	case fn:
 		return c.value.(MatchFunc)(value)
 	default:
+		//comparison operators
 		result, err := c.compare(value, c.value)
 		if err != nil {
 			return false, err
@@ -286,26 +285,7 @@ func (q *Query) String() string {
 	s += "Where "
 	for field, criteria := range q.fieldCriteria {
 		for i := range criteria {
-			s += field + " "
-			switch criteria[i].operator {
-			case eq:
-				s += "=="
-			case ne:
-				s += "!="
-			case gt:
-				s += ">"
-			case lt:
-				s += "<"
-			case le:
-				s += "<="
-			case ge:
-				s += ">="
-			case in:
-				s += "in"
-			default:
-				panic("invalid operator")
-			}
-			s += " " + fmt.Sprintf("%v", criteria[i].value)
+			s += field + " " + criteria[i].String()
 			s += "\n\tAND "
 		}
 	}
@@ -318,4 +298,31 @@ func (q *Query) String() string {
 	}
 
 	return s
+}
+
+func (c *Criterion) String() string {
+	s := ""
+	switch c.operator {
+	case eq:
+		s += "=="
+	case ne:
+		s += "!="
+	case gt:
+		s += ">"
+	case lt:
+		s += "<"
+	case le:
+		s += "<="
+	case ge:
+		s += ">="
+	case in:
+		return "in " + fmt.Sprintf("%v", c.inValues)
+	case re:
+		s += "matches the regular expression"
+	case fn:
+		s += "matches the function"
+	default:
+		panic("invalid operator")
+	}
+	return s + " " + fmt.Sprintf("%v", c.value)
 }

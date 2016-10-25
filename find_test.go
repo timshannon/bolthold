@@ -122,6 +122,24 @@ var testData = []ItemTest{
 		Category: "food",
 		Created:  time.Now().AddDate(0, 0, -30),
 	},
+	ItemTest{
+		ID:       8,
+		Name:     "mouse",
+		Category: "animal",
+		Created:  time.Now(),
+	},
+	ItemTest{
+		ID:       12,
+		Name:     "fish",
+		Category: "animal",
+		Created:  time.Now(),
+	},
+	ItemTest{
+		ID:       13,
+		Name:     "fish",
+		Category: "food",
+		Created:  time.Now(),
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
