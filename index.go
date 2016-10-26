@@ -108,39 +108,39 @@ func indexBucketName(typeName, indexName string) []byte {
 // keyList is a slice of unique, sorted keys([]byte) such as what an index points to
 type keyList [][]byte
 
-func (v keyList) add(key []byte) {
-	i := sort.Search(len(v), func(i int) bool {
-		return bytes.Compare(v[i], key) >= 0
+func (v *keyList) add(key []byte) {
+	i := sort.Search(len(*v), func(i int) bool {
+		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	if i < len(v) {
+	if i < len(*v) {
 		// already added
 		return
 	}
 
-	v = append(v, nil)
-	copy(v[i+1:], v[i:])
-	v[i] = key
+	*v = append(*v, nil)
+	copy((*v)[i+1:], (*v)[i:])
+	(*v)[i] = key
 }
 
-func (v keyList) remove(key []byte) {
-	i := sort.Search(len(v), func(i int) bool {
-		return bytes.Compare(v[i], key) >= 0
+func (v *keyList) remove(key []byte) {
+	i := sort.Search(len(*v), func(i int) bool {
+		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	if i < len(v) {
-		copy(v[i:], v[i+1:])
-		v[len(v)-1] = nil
-		v = v[:len(v)-1]
+	if i < len(*v) {
+		copy((*v)[i:], (*v)[i+1:])
+		(*v)[len(*v)-1] = nil
+		*v = (*v)[:len(*v)-1]
 	}
 }
 
-func (v keyList) in(key []byte) bool {
-	i := sort.Search(len(v), func(i int) bool {
-		return bytes.Compare(v[i], key) >= 0
+func (v *keyList) in(key []byte) bool {
+	i := sort.Search(len(*v), func(i int) bool {
+		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	return (i < len(v))
+	return (i < len(*v))
 }
 
 type iterator struct {
@@ -251,13 +251,13 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 			if ok {
 				// append the slice of keys stored in the index
-				var keys = new(keyList)
-				err := decode(v, keys)
+				var keys = make(keyList, 0)
+				err := decode(v, &keys)
 				if err != nil {
 					return nil, err
 				}
 
-				nKeys = append(nKeys, [][]byte(*keys)...)
+				nKeys = append(nKeys, [][]byte(keys)...)
 			}
 
 		}

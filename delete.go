@@ -36,7 +36,7 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 		return ErrNotFound
 	}
 
-	value := reflect.New(reflect.TypeOf(dataType))
+	value := reflect.New(reflect.TypeOf(dataType)).Interface()
 
 	bVal := b.Get(gk)
 
@@ -60,3 +60,5 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 
 	return nil
 }
+
+//TODO: DeleteMatching(query)
