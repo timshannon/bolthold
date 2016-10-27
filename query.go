@@ -29,6 +29,9 @@ func Key() string {
 	return ""
 }
 
+// TODO: Allow referencing self in queries
+// Where("FirstName").Eq(Field("LastName"))
+
 // Query is a chained collection of criteria of which an object in the bolthold needs to match to be returned
 type Query struct {
 	index         string

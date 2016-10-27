@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+// ErrTypeMismatch is the error thrown when two types cannot be compared
+type ErrTypeMismatch struct {
+	Value interface{}
+	Other interface{}
+}
+
+func (e *ErrTypeMismatch) Error() string {
+	return fmt.Sprintf("Type %s cannot be compared with %v", e.Value, e.Other)
+}
+
 //Comparer compares a type against the encoded value in the store. The result should be 0 if current==other,
 // -1 if current < other, and +1 if current > other.
 // if a field in a struct doesn't specify a comparer, then the default comparison is used (convert to string and compare)
@@ -36,7 +46,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case time.Time:
 		other, ok := other.(time.Time)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 		if value.(time.Time).Equal(other) {
 			return 0, nil
@@ -49,7 +59,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case big.Float:
 		o, ok := other.(big.Float)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		v := value.(big.Float)
@@ -58,7 +68,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case big.Int:
 		o, ok := other.(big.Int)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		v := value.(big.Int)
@@ -67,7 +77,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case big.Rat:
 		o, ok := other.(big.Rat)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		v := value.(big.Rat)
@@ -76,7 +86,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case int:
 		other, ok := other.(int)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(int) == other {
@@ -90,7 +100,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case int8:
 		other, ok := other.(int8)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(int8) == other {
@@ -105,7 +115,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case int16:
 		other, ok := other.(int16)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(int16) == other {
@@ -119,7 +129,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case int32:
 		other, ok := other.(int32)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(int32) == other {
@@ -134,7 +144,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case int64:
 		other, ok := other.(int64)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(int64) == other {
@@ -148,7 +158,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case uint:
 		other, ok := other.(uint)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(uint) == other {
@@ -162,7 +172,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case uint8:
 		other, ok := other.(uint8)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(uint8) == other {
@@ -177,7 +187,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case uint16:
 		other, ok := other.(uint16)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(uint16) == other {
@@ -191,7 +201,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case uint32:
 		other, ok := other.(uint32)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(uint32) == other {
@@ -206,7 +216,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case uint64:
 		other, ok := other.(uint64)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(uint64) == other {
@@ -220,7 +230,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case float32:
 		other, ok := other.(float32)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(float32) == other {
@@ -234,7 +244,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case float64:
 		other, ok := other.(float64)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(float64) == other {
@@ -248,7 +258,7 @@ func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
 	case string:
 		other, ok := other.(string)
 		if !ok {
-			return 0, fmt.Errorf("Type %s cannot be compared with %v", t, other)
+			return 0, &ErrTypeMismatch{t, other}
 		}
 
 		if value.(string) == other {

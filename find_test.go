@@ -5,7 +5,10 @@
 package bolthold_test
 
 import (
+	"errors"
+	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -185,13 +188,83 @@ var tests = []test{
 		query:  bolthold.Where("Category").Gt("food"),
 		result: []int{0, 1, 3, 6, 11},
 	},
+	test{
+		name:   "Less Than Key",
+		query:  bolthold.Where(bolthold.Key()).Lt(testData[0].key()),
+		result: []int{},
+	},
+	test{
+		name:   "Less Than Field Without Index",
+		query:  bolthold.Where("ID").Lt(5),
+		result: []int{0, 1, 2, 3, 5},
+	},
+	test{
+		name:   "Less Than Field With Index",
+		query:  bolthold.Where("Category").Lt("food"),
+		result: []int{2, 5, 8, 9, 13, 14, 16},
+	},
+	test{
+		name:   "Less Than or Equal To Key",
+		query:  bolthold.Where(bolthold.Key()).Le(testData[0].key()),
+		result: []int{0},
+	},
+	test{
+		name:   "Less Than or Equal To Field Without Index",
+		query:  bolthold.Where("ID").Le(5),
+		result: []int{0, 1, 2, 3, 5, 6, 7},
+	},
+	test{
+		name:   "Less Than Field With Index",
+		query:  bolthold.Where("Category").Le("food"),
+		result: []int{2, 5, 8, 9, 13, 14, 16, 4, 7, 10, 12, 15},
+	},
+	test{
+		name:   "Greater Than or Equal To Key",
+		query:  bolthold.Where(bolthold.Key()).Ge(testData[10].key()),
+		result: []int{16, 10},
+	},
+	test{
+		name:   "Greater Than or Equal To Field Without Index",
+		query:  bolthold.Where("ID").Ge(10),
+		result: []int{12, 14, 15, 11},
+	},
+	test{
+		name:   "Greater Than or Equal To Field With Index",
+		query:  bolthold.Where("Category").Ge("food"),
+		result: []int{0, 1, 3, 6, 11, 4, 7, 10, 12, 15},
+	},
+	test{
+		name:   "In",
+		query:  bolthold.Where("ID").In(5, 8, 3),
+		result: []int{6, 7, 4, 13, 3},
+	},
+	test{
+		name:   "Regular Expression",
+		query:  bolthold.Where("Name").RegExp(regexp.MustCompile("ea")),
+		result: []int{2, 9, 12},
+	},
+	test{
+		name: "Function",
+		query: bolthold.Where("Name").MatchFunc(func(field interface{}) (bool, error) {
+			_, ok := field.(string)
+			if !ok {
+				return false, errors.New("Field not a string!")
+			}
+
+			return strings.HasPrefix(field.(string), "oat"), nil
+		}),
+		result: []int{12},
+	},
+	// test time
+	// test chained queries
+	// test or'd queries
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
 	for i := range testData {
 		err := store.Insert(testData[i].key(), testData[i])
 		if err != nil {
-			t.Fatalf("Error insertering test data for find test: %s", err)
+			t.Fatalf("Error inserting test data for find test: %s", err)
 		}
 	}
 }
