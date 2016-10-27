@@ -25,7 +25,6 @@ type Index func(name string, value interface{}) ([]byte, error)
 // adds an item to the index
 func indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
-
 	for name, index := range indexes {
 		err := indexUpdate(storer.Type(), name, index, tx, key, data, false)
 		if err != nil {
@@ -113,7 +112,7 @@ func (v *keyList) add(key []byte) {
 		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	if i < len(*v) {
+	if i < len(*v) && bytes.Compare((*v)[i], key) == 0 {
 		// already added
 		return
 	}
