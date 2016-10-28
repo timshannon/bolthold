@@ -15,6 +15,8 @@ type decodeFunc func(data []byte, value interface{}) error
 var encode encodeFunc
 var decode decodeFunc
 
+//TODO: Use reader / writer interface
+
 func defaultEncode(value interface{}) ([]byte, error) {
 	var buff bytes.Buffer
 

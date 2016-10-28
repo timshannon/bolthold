@@ -135,7 +135,7 @@ var testData = []ItemTest{
 		ID:       12,
 		Name:     "fish",
 		Category: "animal",
-		Created:  time.Now(),
+		Created:  time.Now().AddDate(0, 0, -1),
 	},
 	ItemTest{ //15
 		ID:       13,
@@ -172,6 +172,21 @@ var tests = []test{
 		name:   "Equal Field With Index",
 		query:  bolthold.Where("Category").Eq("vehicle"),
 		result: []int{0, 1, 3, 6, 11},
+	},
+	test{
+		name:   "Not Equal Key",
+		query:  bolthold.Where(bolthold.Key()).Ne(testData[4].key()),
+		result: []int{0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Not Equal Field Without Index",
+		query:  bolthold.Where("Name").Ne(testData[1].Name),
+		result: []int{0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Not Equal Field With Index",
+		query:  bolthold.Where("Category").Ne("vehicle"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
 	test{
 		name:   "Greater Than Key",
@@ -255,9 +270,41 @@ var tests = []test{
 		}),
 		result: []int{12},
 	},
-	// test time
-	// test chained queries
-	// test or'd queries
+	test{
+		name:   "Time Comparison",
+		query:  bolthold.Where("Created").Gt(time.Now()),
+		result: []int{1, 3, 8, 9, 11},
+	},
+	test{
+		name:   "Chained And Query",
+		query:  bolthold.Where("Created").Gt(time.Now()).And("Category").Eq("vehicle"),
+		result: []int{1, 3, 11},
+	},
+	test{
+		name:   "Multiple Chained And Queries",
+		query:  bolthold.Where("Created").Gt(time.Now()).And("Category").Eq("vehicle").And("ID").Ge(10),
+		result: []int{11},
+	},
+	test{
+		name:   "Chained And Query with leading Index", // also different order same criteria
+		query:  bolthold.Where("Category").Eq("vehicle").And("ID").Ge(10).And("Created").Gt(time.Now()),
+		result: []int{11},
+	},
+	test{
+		name:   "Chained Or Query with leading index",
+		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")),
+		result: []int{0, 1, 3, 6, 11, 2, 5, 8, 9, 13, 14, 16},
+	},
+	test{
+		name:   "Chained Or Query with unioned data",
+		query:  bolthold.Where("Category").Eq("animal").Or(bolthold.Where("Name").Eq("fish")),
+		result: []int{2, 5, 8, 9, 13, 14, 16, 15},
+	},
+	test{
+		name:   "Multiple Chained And + Or Query ",
+		query:  bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
+		result: []int{8, 9, 15},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {

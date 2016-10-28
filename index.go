@@ -139,7 +139,7 @@ func (v *keyList) in(key []byte) bool {
 		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	return (i < len(*v))
+	return (i < len(*v) && bytes.Compare((*v)[i], key) == 0)
 }
 
 type iterator struct {

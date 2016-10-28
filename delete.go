@@ -61,4 +61,29 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 	return nil
 }
 
-//TODO: DeleteMatching(query)
+// DeleteMatching deletes all of the records that match the passed in query
+// datatype is needed so indexes can be properly updated
+func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
+	return s.Bolt().View(func(tx *bolt.Tx) error {
+		return s.TxDeleteMatching(tx, dataType, query)
+	})
+}
+
+// TxDeleteMatching does the same as DeleteMatching, but allows you to specify your own transaction
+func (s *Store) TxDeleteMatching(tx *bolt.Tx, dataType interface{}, query *Query) error {
+
+	toDelete := make(keyList, 0)
+	err := keyOnlyQuery(tx, dataType, toDelete, query)
+	if err != nil {
+		return err
+	}
+
+	for i := range toDelete {
+		err = s.TxDelete(tx, toDelete[i], dataType)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

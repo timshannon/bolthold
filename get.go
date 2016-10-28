@@ -6,7 +6,6 @@ package bolthold
 
 import (
 	"errors"
-	"reflect"
 
 	"github.com/boltdb/bolt"
 )
@@ -46,7 +45,8 @@ func (s *Store) exists(tx *bolt.Tx, key []byte, storer Storer) bool {
 }
 
 // Find retrieves a set of values from the bolthold that matches the passed in query
-// result must be a pointer to a slice
+// result must be a pointer to a slice.
+// The result of the query will be appended to the passed in result slice
 func (s *Store) Find(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
 		return s.TxFind(tx, result, query)
@@ -55,81 +55,5 @@ func (s *Store) Find(result interface{}, query *Query) error {
 
 // TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the bolthold
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
-	return s.runQuery(tx, result, query, nil)
-}
-
-func (s *Store) runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
-	resultVal := reflect.ValueOf(result)
-	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
-		panic("result argument must be a slice address")
-	}
-
-	sliceVal := resultVal.Elem()
-	sliceVal = sliceVal.Slice(0, 0) // empty slice
-
-	elType := sliceVal.Type().Elem()
-
-	// preserve original type
-	oType := elType
-
-	for elType.Kind() == reflect.Ptr {
-		elType = elType.Elem()
-	}
-
-	iter := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query)
-
-	newKeys := make(keyList, 0)
-
-	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
-		if len(retrievedKeys) != 0 {
-			// don't check this record if it's already been retrieved
-			if retrievedKeys.in(k) {
-				continue
-			}
-		}
-
-		val := reflect.New(elType)
-
-		err := decode(v, val.Interface())
-		if err != nil {
-			return err
-		}
-
-		ok, err := query.matchesAllFields(k, val)
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			// add to result
-			if oType.Kind() == reflect.Ptr {
-				sliceVal = reflect.Append(sliceVal, val)
-			} else {
-				sliceVal = reflect.Append(sliceVal, val.Elem())
-			}
-			// track that this key's entry has been added to the result list
-			newKeys.add(k)
-		}
-	}
-
-	if iter.Error() != nil {
-		return iter.Error()
-	}
-
-	if len(query.ors) > 0 {
-		for i := range newKeys {
-			retrievedKeys.add(newKeys[i])
-		}
-
-		for i := range query.ors {
-			err := s.runQuery(tx, result, query.ors[i], retrievedKeys)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
-
-	return nil
+	return runQuery(tx, result, query, nil)
 }

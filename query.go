@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"regexp"
 	"unicode"
+
+	"github.com/boltdb/bolt"
 )
 
 const (
@@ -328,4 +330,135 @@ func (c *Criterion) String() string {
 		panic("invalid operator")
 	}
 	return s + " " + fmt.Sprintf("%v", c.value)
+}
+
+func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
+	resultVal := reflect.ValueOf(result)
+	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
+		panic("result argument must be a slice address")
+	}
+
+	sliceVal := resultVal.Elem()
+	//sliceVal = sliceVal.Slice(0, 0) // empty slice
+
+	elType := sliceVal.Type().Elem()
+
+	// preserve original type
+	oType := elType
+
+	for elType.Kind() == reflect.Ptr {
+		elType = elType.Elem()
+	}
+
+	iter := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query)
+
+	newKeys := make(keyList, 0)
+
+	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
+
+		if len(retrievedKeys) != 0 {
+			// don't check this record if it's already been retrieved
+			if retrievedKeys.in(k) {
+				continue
+			}
+		}
+
+		val := reflect.New(elType)
+
+		err := decode(v, val.Interface())
+		if err != nil {
+			return err
+		}
+
+		ok, err := query.matchesAllFields(k, val)
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			// add to result
+			if oType.Kind() == reflect.Ptr {
+				sliceVal = reflect.Append(sliceVal, val)
+			} else {
+				sliceVal = reflect.Append(sliceVal, val.Elem())
+			}
+			// track that this key's entry has been added to the result list
+			newKeys.add(k)
+		}
+	}
+
+	if iter.Error() != nil {
+		return iter.Error()
+	}
+
+	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
+
+	if len(query.ors) > 0 {
+		for i := range newKeys {
+			retrievedKeys.add(newKeys[i])
+		}
+
+		for i := range query.ors {
+			err := runQuery(tx, result, query.ors[i], retrievedKeys)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func keyOnlyQuery(tx *bolt.Tx, dataType interface{}, keys keyList, query *Query) error {
+	storer := newStorer(dataType)
+
+	iter := newIterator(tx, storer.Type(), query)
+
+	newKeys := make(keyList, 0)
+
+	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
+
+		if len(keys) != 0 {
+			// don't check this record if it's already been retrieved
+			if keys.in(k) {
+				continue
+			}
+		}
+
+		val := reflect.New(reflect.TypeOf(dataType))
+
+		err := decode(v, val.Interface())
+		if err != nil {
+			return err
+		}
+
+		ok, err := query.matchesAllFields(k, val)
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			newKeys.add(k)
+		}
+	}
+
+	if iter.Error() != nil {
+		return iter.Error()
+	}
+
+	if len(query.ors) > 0 {
+		for i := range newKeys {
+			keys.add(newKeys[i])
+		}
+
+		for i := range query.ors {
+			err := keyOnlyQuery(tx, dataType, keys, query.ors[i])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+
 }
