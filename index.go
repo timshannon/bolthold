@@ -276,6 +276,10 @@ func (i *iterator) Next() (key []byte, value []byte) {
 		return nil, nil
 	}
 
+	if i.dataBucket == nil {
+		return nil, nil
+	}
+
 	if len(i.keyCache) == 0 {
 		newKeys, err := i.nextKeys(i.prepCursor, i.indexCursor)
 		i.prepCursor = false

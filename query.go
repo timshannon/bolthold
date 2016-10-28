@@ -409,7 +409,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	return nil
 }
 
-func keyOnlyQuery(tx *bolt.Tx, dataType interface{}, keys keyList, query *Query) error {
+func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList) error {
 	storer := newStorer(dataType)
 
 	iter := newIterator(tx, storer.Type(), query)
@@ -418,9 +418,9 @@ func keyOnlyQuery(tx *bolt.Tx, dataType interface{}, keys keyList, query *Query)
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 
-		if len(keys) != 0 {
-			// don't check this record if it's already been retrieved
-			if keys.in(k) {
+		if len(deletedKeys) != 0 {
+			// don't check this record if it's already been deleted
+			if deletedKeys.in(k) {
 				continue
 			}
 		}
@@ -438,6 +438,18 @@ func keyOnlyQuery(tx *bolt.Tx, dataType interface{}, keys keyList, query *Query)
 		}
 
 		if ok {
+			b := tx.Bucket([]byte(storer.Type()))
+			err = b.Delete(k)
+			if err != nil {
+				return err
+			}
+
+			// remove any indexes
+			err = indexDelete(storer, tx, k, val.Interface())
+			if err != nil {
+				return err
+			}
+
 			newKeys.add(k)
 		}
 	}
@@ -448,11 +460,11 @@ func keyOnlyQuery(tx *bolt.Tx, dataType interface{}, keys keyList, query *Query)
 
 	if len(query.ors) > 0 {
 		for i := range newKeys {
-			keys.add(newKeys[i])
+			deletedKeys.add(newKeys[i])
 		}
 
 		for i := range query.ors {
-			err := keyOnlyQuery(tx, dataType, keys, query.ors[i])
+			err := deleteQuery(tx, dataType, query.ors[i], deletedKeys)
 			if err != nil {
 				return err
 			}

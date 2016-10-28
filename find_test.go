@@ -348,3 +348,20 @@ func TestFind(t *testing.T) {
 		}
 	})
 }
+
+type BadType struct{}
+
+func TestFindOnUnknownType(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []BadType
+		//FIXME
+		err := store.Find(&result, bolthold.Where("BadName").Eq("blah"))
+		if err != nil {
+			t.Fatalf("Error finding data from bolthold: %s", err)
+		}
+		if len(result) != 0 {
+			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 0, result)
+		}
+	})
+}
