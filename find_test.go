@@ -355,7 +355,6 @@ func TestFindOnUnknownType(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		insertTestData(t, store)
 		var result []BadType
-		//FIXME
 		err := store.Find(&result, bolthold.Where("BadName").Eq("blah"))
 		if err != nil {
 			t.Fatalf("Error finding data from bolthold: %s", err)
@@ -364,4 +363,19 @@ func TestFindOnUnknownType(t *testing.T) {
 			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 0, result)
 		}
 	})
+}
+
+func TestFindWithNilQuery(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+		err := store.Find(&result, nil)
+		if err != nil {
+			t.Fatalf("Error finding data from bolthold: %s", err)
+		}
+		if len(result) != len(testData) {
+			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), len(testData), result)
+		}
+	})
+
 }

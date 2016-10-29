@@ -154,12 +154,17 @@ type iterator struct {
 // TODO: Use cursor.Seek() by looking at query criteria to skip uncessary reads and seek to the earliest potential record
 
 func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
-	criteria := query.fieldCriteria[query.index]
 
 	iter := &iterator{
 		dataBucket: tx.Bucket([]byte(typeName)),
 		prepCursor: true,
 	}
+
+	if iter.dataBucket == nil {
+		return iter
+	}
+
+	criteria := query.fieldCriteria[query.index]
 
 	// 3 scenarios
 	//   Key field
@@ -277,6 +282,10 @@ func (i *iterator) Next() (key []byte, value []byte) {
 	}
 
 	if i.dataBucket == nil {
+		return nil, nil
+	}
+
+	if i.nextKeys == nil {
 		return nil, nil
 	}
 

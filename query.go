@@ -43,6 +43,23 @@ type Query struct {
 	badIndex      bool
 }
 
+// IsEmpty returns true if the query is an empty query
+// an empty query matches against everything
+func (q *Query) IsEmpty() bool {
+	if q.index != "" {
+		return false
+	}
+	if len(q.fieldCriteria) != 0 {
+		return false
+	}
+
+	if q.ors != nil {
+		return false
+	}
+
+	return true
+}
+
 // Criterion is an operator and a value that a given field needs to match on
 type Criterion struct {
 	query    *Query
@@ -95,6 +112,10 @@ func (q *Query) Or(query *Query) *Query {
 }
 
 func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) {
+	if q.IsEmpty() {
+		return true, nil
+	}
+
 	for field, criteria := range q.fieldCriteria {
 		if field == q.index && !q.badIndex {
 			// already handled by index Iterator
@@ -333,6 +354,9 @@ func (c *Criterion) String() string {
 }
 
 func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
+	if query == nil {
+		query = &Query{}
+	}
 	resultVal := reflect.ValueOf(result)
 	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
 		panic("result argument must be a slice address")
@@ -410,6 +434,9 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 }
 
 func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList) error {
+	if query == nil {
+		query = &Query{}
+	}
 	storer := newStorer(dataType)
 
 	iter := newIterator(tx, storer.Type(), query)
