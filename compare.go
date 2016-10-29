@@ -31,6 +31,13 @@ type Comparer interface {
 }
 
 func (c *Criterion) compare(testValue, otherValue interface{}) (int, error) {
+	if testValue == nil || otherValue == nil {
+		if testValue == otherValue {
+			return 0, nil
+		}
+		return 0, &ErrTypeMismatch{testValue, otherValue}
+	}
+
 	value := testValue
 
 	for reflect.TypeOf(value).Kind() == reflect.Ptr {

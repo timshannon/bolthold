@@ -21,8 +21,9 @@ const (
 	ge        // >=
 	le        // <=
 	in
-	re // regular expression
-	fn // func
+	re    // regular expression
+	fn    // func
+	isnil // test's for nil
 )
 
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
@@ -209,6 +210,11 @@ func (c *Criterion) RegExp(expression *regexp.Regexp) *Query {
 	return c.op(re, expression)
 }
 
+// IsNil will test if a field is equal to nil
+func (c *Criterion) IsNil() *Query {
+	return c.op(isnil, nil)
+}
+
 // MatchFunc is a function used to test an arbitrary matching value in a query
 type MatchFunc func(field interface{}) (bool, error)
 
@@ -221,11 +227,13 @@ func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	var value interface{}
 	if encoded {
-		// used with keys
-		value = reflect.New(reflect.TypeOf(c.value)).Interface()
-		err := decode(testValue.([]byte), value)
-		if err != nil {
-			return false, err
+		if len(testValue.([]byte)) != 0 {
+			// used with keys
+			value = reflect.New(reflect.TypeOf(c.value)).Interface()
+			err := decode(testValue.([]byte), value)
+			if err != nil {
+				return false, err
+			}
 		}
 
 	} else {
@@ -249,6 +257,8 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
 	case fn:
 		return c.value.(MatchFunc)(value)
+	case isnil:
+		return reflect.ValueOf(value).IsNil(), nil
 	default:
 		//comparison operators
 		result, err := c.compare(value, c.value)

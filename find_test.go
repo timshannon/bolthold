@@ -20,6 +20,7 @@ type ItemTest struct {
 	Name     string
 	Category string `boltholdIndex:"Category"`
 	Created  time.Time
+	Tags     []string
 }
 
 func (i *ItemTest) key() string {
@@ -76,6 +77,7 @@ var testData = []ItemTest{
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
+		Tags:     []string{"cooked"},
 	},
 	ItemTest{ //5
 		ID:       1,
@@ -94,6 +96,7 @@ var testData = []ItemTest{
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
+		Tags:     []string{"cooked"},
 	},
 	ItemTest{ //8
 		ID:       6,
@@ -112,6 +115,7 @@ var testData = []ItemTest{
 		Name:     "tacos",
 		Category: "food",
 		Created:  time.Now().AddDate(-3, 0, 0),
+		Tags:     []string{"cooked"},
 	},
 	ItemTest{ //11
 		ID:       10,
@@ -124,6 +128,7 @@ var testData = []ItemTest{
 		Name:     "oatmeal",
 		Category: "food",
 		Created:  time.Now().AddDate(0, 0, -30),
+		Tags:     []string{"cooked"},
 	},
 	ItemTest{ //13
 		ID:       8,
@@ -142,6 +147,7 @@ var testData = []ItemTest{
 		Name:     "fish",
 		Category: "food",
 		Created:  time.Now(),
+		Tags:     []string{"cooked"},
 	},
 	ItemTest{ //16
 		ID:       9,
@@ -309,6 +315,11 @@ var tests = []test{
 		name:   "Nil Query",
 		query:  nil,
 		result: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Nil Comparison",
+		query:  bolthold.Where("Tags").IsNil(),
+		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
 	},
 }
 
