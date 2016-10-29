@@ -305,6 +305,11 @@ var tests = []test{
 		query:  bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
 		result: []int{8, 9, 15},
 	},
+	test{
+		name:   "Nil Query",
+		query:  nil,
+		result: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -337,6 +342,7 @@ func TestFind(t *testing.T) {
 					for k := range tst.result {
 						if result[i].equal(&testData[tst.result[k]]) {
 							found = true
+							break
 						}
 					}
 
@@ -363,19 +369,4 @@ func TestFindOnUnknownType(t *testing.T) {
 			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 0, result)
 		}
 	})
-}
-
-func TestFindWithNilQuery(t *testing.T) {
-	testWrap(t, func(store *bolthold.Store, t *testing.T) {
-		insertTestData(t, store)
-		var result []ItemTest
-		err := store.Find(&result, nil)
-		if err != nil {
-			t.Fatalf("Error finding data from bolthold: %s", err)
-		}
-		if len(result) != len(testData) {
-			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), len(testData), result)
-		}
-	})
-
 }

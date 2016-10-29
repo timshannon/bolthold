@@ -64,7 +64,7 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 // DeleteMatching deletes all of the records that match the passed in query
 // datatype is needed so indexes can be properly updated
 func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
-	return s.Bolt().View(func(tx *bolt.Tx) error {
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return s.TxDeleteMatching(tx, dataType, query)
 	})
 }

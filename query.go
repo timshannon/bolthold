@@ -439,6 +439,10 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 	}
 	storer := newStorer(dataType)
 
+	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
+		dataType = reflect.ValueOf(dataType).Elem().Interface()
+	}
+
 	iter := newIterator(tx, storer.Type(), query)
 
 	newKeys := make(keyList, 0)
