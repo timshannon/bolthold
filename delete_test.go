@@ -58,8 +58,13 @@ func TestDeleteMatching(t *testing.T) {
 				}
 
 				if len(result) != (len(testData) - len(tst.result)) {
-					t.Fatalf("Delete result count is %d wanted %d.  Results: %v", len(result),
-						(len(testData) - len(tst.result)), result)
+					if testing.Verbose() {
+						t.Fatalf("Delete result count is %d wanted %d.  Results: %v", len(result),
+							(len(testData) - len(tst.result)), result)
+					}
+					t.Fatalf("Delete result count is %d wanted %d.", len(result),
+						(len(testData) - len(tst.result)))
+
 				}
 
 				for i := range result {
@@ -72,7 +77,10 @@ func TestDeleteMatching(t *testing.T) {
 					}
 
 					if found {
-						t.Fatalf("Found %v in the result set when it should've been deleted! Full results: %v", result[i], result)
+						if testing.Verbose() {
+							t.Fatalf("Found %v in the result set when it should've been deleted! Full results: %v", result[i], result)
+						}
+						t.Fatalf("Found %v in the result set when it should've been deleted! Full results: %v", result[i])
 					}
 				}
 

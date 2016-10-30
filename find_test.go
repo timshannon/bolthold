@@ -21,6 +21,8 @@ type ItemTest struct {
 	Category string `boltholdIndex:"Category"`
 	Created  time.Time
 	Tags     []string
+	Color    string
+	Fruit    string
 }
 
 func (i *ItemTest) key() string {
@@ -84,12 +86,16 @@ var testData = []ItemTest{
 		Name:     "crow",
 		Category: "animal",
 		Created:  time.Now(),
+		Color:    "blue",
+		Fruit:    "orange",
 	},
 	ItemTest{ //6
 		ID:       5,
 		Name:     "van",
 		Category: "vehicle",
 		Created:  time.Now(),
+		Color:    "orange",
+		Fruit:    "orange",
 	},
 	ItemTest{ //7
 		ID:       5,
@@ -116,12 +122,15 @@ var testData = []ItemTest{
 		Category: "food",
 		Created:  time.Now().AddDate(-3, 0, 0),
 		Tags:     []string{"cooked"},
+		Color:    "orange",
 	},
 	ItemTest{ //11
 		ID:       10,
 		Name:     "golf cart",
 		Category: "vehicle",
 		Created:  time.Now().AddDate(0, 0, 30),
+		Color:    "pink",
+		Fruit:    "apple",
 	},
 	ItemTest{ //12
 		ID:       11,
@@ -321,6 +330,11 @@ var tests = []test{
 		query:  bolthold.Where("Tags").IsNil(),
 		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
 	},
+	test{
+		name:   "Self-Field comparison",
+		query:  bolthold.Where("Color").Eq(bolthold.Field("Fruit")).And("Fruit").Ne(""),
+		result: []int{6},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -345,7 +359,10 @@ func TestFind(t *testing.T) {
 					t.Fatalf("Error finding data from bolthold: %s", err)
 				}
 				if len(result) != len(tst.result) {
-					t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), len(tst.result), result)
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), len(tst.result), result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), len(tst.result))
 				}
 
 				for i := range result {
@@ -358,7 +375,10 @@ func TestFind(t *testing.T) {
 					}
 
 					if !found {
-						t.Fatalf("Could not find %v in the result set! Full results: %v", result[i], result)
+						if testing.Verbose() {
+							t.Fatalf("Could not find %v in the result set! Full results: %v", result[i], result)
+						}
+						t.Fatalf("Could not find %v in the result set!", result[i])
 					}
 				}
 			})

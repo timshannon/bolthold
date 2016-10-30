@@ -14,16 +14,16 @@ import (
 )
 
 const (
-	eq = iota //==
-	ne        // !=
-	gt        // >
-	lt        // <
-	ge        // >=
-	le        // <=
-	in
-	re    // regular expression
-	fn    // func
-	isnil // test's for nil
+	eq    = iota //==
+	ne           // !=
+	gt           // >
+	lt           // <
+	ge           // >=
+	le           // <=
+	in           // in
+	re           // regular expression
+	fn           // func
+	isnil        // test's for nil
 )
 
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
@@ -32,9 +32,6 @@ func Key() string {
 	return ""
 }
 
-// TODO: Allow referencing self in queries
-// Where("FirstName").Eq(Field("LastName"))
-
 // Query is a chained collection of criteria of which an object in the bolthold needs to match to be returned
 type Query struct {
 	index         string
@@ -42,6 +39,7 @@ type Query struct {
 	fieldCriteria map[string][]*Criterion
 	ors           []*Query
 	badIndex      bool
+	currentRow    interface{}
 }
 
 // IsEmpty returns true if the query is an empty query
@@ -68,6 +66,9 @@ type Criterion struct {
 	value    interface{}
 	inValues []interface{}
 }
+
+// Field allows for referencing a field in structure being compared
+type Field string
 
 // Where starts a query for specifying the criteria that an object in the bolthold needs to match to
 // be returned in a Find result
@@ -404,6 +405,8 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 			return err
 		}
 
+		query.currentRow = val.Interface()
+
 		ok, err := query.matchesAllFields(k, val)
 		if err != nil {
 			return err
@@ -472,6 +475,8 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 		if err != nil {
 			return err
 		}
+
+		query.currentRow = val.Interface()
 
 		ok, err := query.matchesAllFields(k, val)
 		if err != nil {
