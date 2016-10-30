@@ -401,3 +401,19 @@ func TestFindOnUnknownType(t *testing.T) {
 		}
 	})
 }
+
+func TestFindWithNilValue(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		var result []ItemTest
+		err := store.Find(&result, bolthold.Where("Name").Eq(nil))
+		if err == nil {
+			t.Fatalf("Comparing with nil did NOT return an error!")
+		}
+
+		if _, ok := err.(*bolthold.ErrTypeMismatch); !ok {
+			t.Fatalf("Comparing with nil did NOT return the correct error.  Got %v", err)
+		}
+	})
+}

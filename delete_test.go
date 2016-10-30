@@ -89,3 +89,40 @@ func TestDeleteMatching(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteOnUnknownType(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var x BadType
+		err := store.DeleteMatching(x, bolthold.Where("BadName").Eq("blah"))
+		if err != nil {
+			t.Fatalf("Error finding data from bolthold: %s", err)
+		}
+
+		var result []ItemTest
+		err = store.Find(&result, nil)
+		if err != nil {
+			t.Fatalf("Error finding result after delete from bolthold: %s", err)
+		}
+
+		if len(result) != len(testData) {
+			t.Fatalf("Find result count after delete is %d wanted %d.", len(result), len(testData))
+		}
+	})
+}
+
+func TestDeleteWithNilValue(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		var result ItemTest
+		err := store.DeleteMatching(&result, bolthold.Where("Name").Eq(nil))
+		if err == nil {
+			t.Fatalf("Comparing with nil did NOT return an error!")
+		}
+
+		if _, ok := err.(*bolthold.ErrTypeMismatch); !ok {
+			t.Fatalf("Comparing with nil did NOT return the correct error.  Got %v", err)
+		}
+	})
+}

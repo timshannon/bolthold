@@ -83,7 +83,7 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 
 		for indexName := range indexes {
 			err := tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
-			if err != nil {
+			if err != nil && err != bolt.ErrBucketNotFound {
 				return err
 			}
 		}
@@ -124,7 +124,8 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 }
 
 // RemoveIndex removes an index from the store.
-func (s *Store) RemoveIndex(storer Storer, indexName string) error {
+func (s *Store) RemoveIndex(dataType interface{}, indexName string) error {
+	storer := newStorer(dataType)
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
 

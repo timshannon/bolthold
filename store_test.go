@@ -5,10 +5,12 @@
 package bolthold_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/boltdb/bolt"
 	"github.com/timshannon/bolthold"
 )
 
@@ -36,15 +38,114 @@ func TestBolt(t *testing.T) {
 	})
 }
 
+// copy from index.go
+func indexName(typeName, indexName string) []byte {
+	return []byte("_index" + ":" + typeName + ":" + indexName)
+}
+
 func TestRemoveIndex(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
-		//TODO
+		insertTestData(t, store)
+		var item ItemTest
+
+		iName := indexName("ItemTest", "Category")
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			if tx.Bucket(iName) == nil {
+				return fmt.Errorf("Index %s doesn't exist!", iName)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = store.RemoveIndex(item, "Category")
+		if err != nil {
+			t.Fatalf("Error removing index %s", err)
+		}
+
+		err = store.Bolt().View(func(tx *bolt.Tx) error {
+			if tx.Bucket(iName) != nil {
+				return fmt.Errorf("Index %s wasn't removed!", iName)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	})
 }
 
 func TestReIndex(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
-		//TODO
+		insertTestData(t, store)
+		var item ItemTest
+
+		iName := indexName("ItemTest", "Category")
+
+		err := store.RemoveIndex(item, "Category")
+		if err != nil {
+			t.Fatalf("Error removing index %s", err)
+		}
+
+		err = store.Bolt().View(func(tx *bolt.Tx) error {
+			if tx.Bucket(iName) != nil {
+				return fmt.Errorf("Index %s wasn't removed!", iName)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = store.ReIndex(&item, nil)
+		if err != nil {
+			t.Fatalf("Error reindexing store: %v", err)
+		}
+
+		err = store.Bolt().View(func(tx *bolt.Tx) error {
+			if tx.Bucket(iName) == nil {
+				return fmt.Errorf("Index %s wasn't rebuilt!", iName)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+	})
+}
+
+type ItemTestClone ItemTest
+
+func TestReIndexWithCopy(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		var item ItemTestClone
+
+		iName := indexName("ItemTestClone", "Category")
+
+		err := store.ReIndex(&item, []byte("ItemTest"))
+		if err != nil {
+			t.Fatalf("Error reindexing store: %v", err)
+		}
+
+		err = store.Bolt().View(func(tx *bolt.Tx) error {
+			if tx.Bucket(iName) == nil {
+				return fmt.Errorf("Index %s wasn't rebuilt!", iName)
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
 	})
 }
 
