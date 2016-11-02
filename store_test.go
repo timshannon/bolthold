@@ -5,6 +5,7 @@
 package bolthold_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,10 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/timshannon/bolthold"
 )
+
+// TODO: Test optional json decode/encode
+// TODO: Test all predefined comparison types
+// TODO: Test Comparer Interface type
 
 func TestOpen(t *testing.T) {
 	filename := tempfile()
@@ -147,6 +152,40 @@ func TestReIndexWithCopy(t *testing.T) {
 		}
 
 	})
+}
+
+func TestAlternateEncoding(t *testing.T) {
+	filename := tempfile()
+	store, err := bolthold.Open(filename, 0666, &bolthold.Options{
+		Encoder: json.Marshal,
+		Decoder: json.Unmarshal,
+	})
+	defer store.Close()
+	defer os.Remove(filename)
+
+	if err != nil {
+		t.Fatalf("Error opening %s: %s", filename, err)
+	}
+
+	insertTestData(t, store)
+
+	tData := testData[3]
+
+	var result []ItemTest
+
+	store.Find(&result, bolthold.Where(bolthold.Key()).Eq(tData.key()))
+
+	if len(result) != 1 {
+		if testing.Verbose() {
+			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+		}
+		t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+	}
+
+	if !result[0].equal(&tData) {
+		t.Fatalf("Results not equal! Wanted %v, got %v", tData, result[0])
+	}
+
 }
 
 // utilities
