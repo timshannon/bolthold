@@ -15,10 +15,6 @@ import (
 	"github.com/timshannon/bolthold"
 )
 
-// TODO: Test optional json decode/encode
-// TODO: Test all predefined comparison types
-// TODO: Test Comparer Interface type
-
 func TestOpen(t *testing.T) {
 	filename := tempfile()
 	store, err := bolthold.Open(filename, 0666, nil)
