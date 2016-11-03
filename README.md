@@ -1,4 +1,4 @@
-#BoltHold
+#BoltHold  [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold)
 
 BoltHold is a simple querying and indexing interface on top of a Bolt DB instance. The goal is to create a simple,
 higher level interface on top of Bolt DB that applies some sane defaults, but exposes the underlying Bolt DB for customizing
@@ -17,7 +17,7 @@ bucket's Key system.  Indexes will be defined as functions which will return a G
 row in a given Bucket, or simple as struct tags defining a particular field as indexable. 
 
 ## Queries
-Queries will be chainable constructs that apply to the dataset in the order they are chained. There will be no "query optimiser".
+Queries will be chain-able constructs that apply to the dataset in the order they are chained. There will be no "query optimiser".
 The first index hit will be the one used.
 
 Queries will look like this:
@@ -30,7 +30,7 @@ s.Find(Where("Name").Eq("Tim Shannon").And("DOB").Lt(time.Now()).Or(Where("Title
 ## Bucket Layout
 One Go Type will have one bucket, and multiple index buckets.  You can skip all of reflect calls by implementing the 
 *Storer* interface.
-You can query custom types by implementing the Comparer inteface on them
+You can query custom types by implementing the Comparer interface on them
 
 ## Behavior Changes
 Since this will be a higher level interface, there will also be some helper functions.  Instead of *Put*, you'll have the

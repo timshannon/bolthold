@@ -5,8 +5,9 @@
 package bolthold_test
 
 import (
+	"fmt"
 	"math/big"
-	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
@@ -88,15 +89,15 @@ type DefaultType struct {
 	Val string
 }
 
-func (d *DefaultType) String() {
+func (d *DefaultType) String() string {
 	return d.Val
 }
 
 type All struct {
 	ATime  time.Time
-	AFloat big.Float
-	AInt   big.Int
-	ARat   big.Rat
+	AFloat *big.Float
+	AInt   *big.Int
+	ARat   *big.Rat
 
 	Aint   int
 	Aint8  int8
@@ -114,32 +115,37 @@ type All struct {
 	Afloat64 float64
 
 	Astring string
+
+	ADefault DefaultType
+}
+
+var allCurrent = All{ // current
+	ATime:  time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
+	AFloat: big.NewFloat(30.5),
+	AInt:   big.NewInt(123),
+	ARat:   big.NewRat(5, 8),
+
+	Aint:   8,
+	Aint8:  8,
+	Aint16: 8,
+	Aint32: 8,
+	Aint64: 8,
+
+	Auint:   8,
+	Auint8:  8,
+	Auint16: 8,
+	Auint32: 8,
+	Auint64: 8,
+
+	Afloat32: 8.8,
+	Afloat64: 8.8,
+
+	Astring: "btest",
+
+	ADefault: DefaultType{"btest"},
 }
 
 var allData = []All{
-	All{ // current
-		ATime:  time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
-		AFloat: big.NewFloat(30.5),
-		AInt:   big.NewInt(123),
-		ARat:   big.NewRat(5, 8),
-
-		Aint:   8,
-		Aint8:  8,
-		Aint16: 8,
-		Aint32: 8,
-		Aint64: 8,
-
-		Auint:   8,
-		Auint8:  8,
-		Auint16: 8,
-		Auint32: 8,
-		Auint64: 8,
-
-		Afloat32: 8.8,
-		Afloat64: 8.8,
-
-		Astring: "btest",
-	},
 	All{ // equal
 		ATime:  time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
 		AFloat: big.NewFloat(30.5),
@@ -161,7 +167,8 @@ var allData = []All{
 		Afloat32: 8.8,
 		Afloat64: 8.8,
 
-		Astring: "btest",
+		Astring:  "btest",
+		ADefault: DefaultType{"btest"},
 	},
 	All{ // greater
 		ATime:  time.Date(2017, 1, 1, 0, 0, 0, 0, time.Local),
@@ -184,7 +191,8 @@ var allData = []All{
 		Afloat32: 9.8,
 		Afloat64: 9.8,
 
-		Astring: "ctest",
+		Astring:  "ctest",
+		ADefault: DefaultType{"ctest"},
 	},
 	All{ // less
 		ATime:  time.Date(2015, 1, 1, 0, 0, 0, 0, time.Local),
@@ -207,17 +215,86 @@ var allData = []All{
 		Afloat32: 4.8,
 		Afloat64: 4.8,
 
-		Astring: "atest",
+		Astring:  "atest",
+		ADefault: DefaultType{"atest"},
 	},
 }
 
 func TestFindWithBuiltinTypes(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		for i := range allData {
-			err := store.Insert(rand.Int(), allData[i])
+			err := store.Insert(i, allData[i])
 			if err != nil {
 				t.Fatalf("Error inserting allData for builtin compare test %s", err)
 			}
+		}
+
+		to := reflect.TypeOf(allCurrent)
+
+		for i := 0; i < to.NumField(); i++ {
+
+			curField := reflect.ValueOf(allCurrent).FieldByName(to.Field(i).Name).Interface()
+			t.Run(fmt.Sprintf("Builtin type %s equal", to.Field(i).Name), func(t *testing.T) {
+
+				// equal
+				var result []All
+				err := store.Find(&result, bolthold.Where(to.Field(i).Name).Eq(curField))
+				if err != nil {
+					t.Fatalf("Error finding equal result %s", err)
+				}
+
+				if len(result) != 1 {
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+				}
+
+				if !reflect.DeepEqual(result[0], allData[0]) {
+					t.Fatalf("%v is not equal to %v", result[0], allData[0])
+				}
+			})
+
+			t.Run(fmt.Sprintf("Builtin type %s greater than", to.Field(i).Name), func(t *testing.T) {
+				// gt
+				var result []All
+				err := store.Find(&result, bolthold.Where(to.Field(i).Name).Gt(curField))
+				if err != nil {
+					t.Fatalf("Error finding equal result %s", err)
+				}
+
+				if len(result) != 1 {
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+				}
+
+				if !reflect.DeepEqual(result[0], allData[1]) {
+					t.Fatalf("%v is not equal to %v", result[0], allData[1])
+				}
+			})
+
+			t.Run(fmt.Sprintf("Builtin type %s less than", to.Field(i).Name), func(t *testing.T) {
+				// lt
+				var result []All
+				err := store.Find(&result, bolthold.Where(to.Field(i).Name).Lt(curField))
+				if err != nil {
+					t.Fatalf("Error finding equal result %s", err)
+				}
+
+				if len(result) != 1 {
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+				}
+
+				if !reflect.DeepEqual(result[0], allData[2]) {
+					t.Fatalf("%v is not equal to %v", result[0], allData[2])
+				}
+			})
+
 		}
 
 	})
