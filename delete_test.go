@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/timshannon/bolthold"
 )
 
@@ -124,5 +125,46 @@ func TestDeleteWithNilValue(t *testing.T) {
 		if _, ok := err.(*bolthold.ErrTypeMismatch); !ok {
 			t.Fatalf("Comparing with nil did NOT return the correct error.  Got %v", err)
 		}
+	})
+}
+
+func TestDeleteReadTxn(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.TxDelete(tx, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Deleting from a read only transaction didn't fail!")
+		}
+
+	})
+}
+
+func TestDeleteNotFound(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Delete(key, data)
+
+		if err == nil {
+			t.Fatalf("Deleting with an unfound key did not return an error")
+		}
+
+		if err != bolthold.ErrNotFound {
+			t.Fatalf("Deleting with an unfound key did not return the correct error.  Wanted %s, got %s",
+				bolthold.ErrNotFound, err)
+		}
+
 	})
 }

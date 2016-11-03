@@ -358,6 +358,8 @@ func (c *Criterion) String() string {
 		s += "matches the regular expression"
 	case fn:
 		s += "matches the function"
+	case isnil:
+		return "is nil"
 	default:
 		panic("invalid operator")
 	}

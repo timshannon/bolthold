@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/timshannon/bolthold"
 )
 
@@ -43,6 +44,25 @@ func TestInsert(t *testing.T) {
 
 		if err != bolthold.ErrKeyExists {
 			t.Fatalf("Insert didn't fail! Expected %s got %s", bolthold.ErrKeyExists, err)
+		}
+
+	})
+}
+
+func TestInsertReadTxn(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.TxInsert(tx, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Inserting into a read only transaction didn't fail!")
 		}
 
 	})
@@ -101,6 +121,25 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
+func TestUpdateReadTxn(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.TxUpdate(tx, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Updating into a read only transaction didn't fail!")
+		}
+
+	})
+}
+
 func TestUpsert(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
@@ -145,5 +184,24 @@ func TestUpsert(t *testing.T) {
 		if !result.equal(update) {
 			t.Fatalf("Upsert didn't complete.  Expected %s, got %s", update, result)
 		}
+	})
+}
+
+func TestUpsertReadTxn(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.TxUpsert(tx, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Updating into a read only transaction didn't fail!")
+		}
+
 	})
 }

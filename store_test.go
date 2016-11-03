@@ -121,6 +121,23 @@ func TestReIndex(t *testing.T) {
 	})
 }
 
+func TestIndexExists(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			if !store.IndexExists(tx, "ItemTest", "Category") {
+				return fmt.Errorf("Index %s doesn't exist!", "ItemTest:Category")
+			}
+			return nil
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+	})
+}
+
 type ItemTestClone ItemTest
 
 func TestReIndexWithCopy(t *testing.T) {

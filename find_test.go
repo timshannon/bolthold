@@ -6,6 +6,7 @@ package bolthold_test
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -335,6 +336,11 @@ var tests = []test{
 		query:  bolthold.Where("Color").Eq(bolthold.Field("Fruit")).And("Fruit").Ne(""),
 		result: []int{6},
 	},
+	test{
+		name:   "Test Key in secondary",
+		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key()).Eq(testData[4].key()),
+		result: []int{4},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -416,4 +422,94 @@ func TestFindWithNilValue(t *testing.T) {
 			t.Fatalf("Comparing with nil did NOT return the correct error.  Got %v", err)
 		}
 	})
+}
+
+func TestFindWithNonSlicePtr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with non-slice pointer did not panic!")
+			}
+		}()
+		var result []ItemTest
+		_ = store.Find(result, bolthold.Where("Name").Eq("blah"))
+	})
+}
+
+func TestQueryWhereNamePanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Querying with a lower case field did not cause a panic!")
+		}
+	}()
+
+	_ = bolthold.Where("lower").Eq("test")
+}
+
+func TestQueryAndNamePanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Querying with a lower case field did not cause a panic!")
+		}
+	}()
+
+	_ = bolthold.Where("Upper").Eq("test").And("lower").Eq("test")
+}
+
+func TestFindOnInvalidFieldName(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+
+		err := store.Find(&result, bolthold.Where("BadFieldName").Eq("test"))
+		if err == nil {
+			t.Fatalf("Find query against a bad field name didn't return an error!")
+		}
+
+	})
+}
+
+func TestQueryStringPrint(t *testing.T) {
+	q := bolthold.Where("FirstField").Eq("first value").And("SecondField").Gt("Second Value").And("ThirdField").
+		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").
+		Ne("Sixth Value").Or(bolthold.Where("FirstField").In("val1", "val2", "val3").And("SecondField").IsNil().
+		And("ThirdField").RegExp(regexp.MustCompile("test")).And("FirstField").
+		MatchFunc(func(field interface{}) (bool, error) {
+			return true, nil
+		}))
+
+	contains := []string{
+		"FirstField == first value",
+		"SecondField > Second Value",
+		"ThirdField < Third Value",
+		"FourthField >= FourthValue",
+		"FifthField <= FifthValue",
+		"SixthField != Sixth Value",
+		"FirstField in [val1 val2 val3]",
+		"FirstField matches the function",
+		"SecondField is nil",
+		"ThirdField matches the regular expression test",
+	}
+
+	// map order isn't guarenteed, check if all needed lines exist
+
+	tst := fmt.Sprintf("%s", q)
+
+	tstLines := strings.Split(tst, "\n")
+
+	for i := range contains {
+		found := false
+		for k := range tstLines {
+			if strings.Contains(tstLines[k], contains[i]) {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Fatalf("Line %s was not found in the result \n%s", contains[i], tst)
+		}
+
+	}
+
 }
