@@ -1,4 +1,4 @@
-#BoltHold  [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold)
+#BoltHold [![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold)
 
 BoltHold is a simple querying and indexing interface on top of a Bolt DB instance. The goal is to create a simple,
 higher level interface on top of Bolt DB that applies some sane defaults, but exposes the underlying Bolt DB for customizing
