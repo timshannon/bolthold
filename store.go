@@ -20,8 +20,8 @@ type Store struct {
 // Options allows you set different options from the defaults
 // For example the encoding and decoding funcs which default to Gob
 type Options struct {
-	Encoder encodeFunc
-	Decoder decodeFunc
+	Encoder EncodeFunc
+	Decoder DecodeFunc
 	*bolt.Options
 }
 
@@ -49,10 +49,10 @@ func fillOptions(options *Options) *Options {
 	}
 
 	if options.Encoder == nil {
-		options.Encoder = defaultEncode
+		options.Encoder = DefaultEncode
 	}
 	if options.Decoder == nil {
-		options.Decoder = defaultDecode
+		options.Decoder = DefaultDecode
 	}
 
 	return options

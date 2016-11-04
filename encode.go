@@ -9,13 +9,17 @@ import (
 	"encoding/gob"
 )
 
-type encodeFunc func(value interface{}) ([]byte, error)
-type decodeFunc func(data []byte, value interface{}) error
+// EncodeFunc is a function for encoding a value into bytes
+type EncodeFunc func(value interface{}) ([]byte, error)
 
-var encode encodeFunc
-var decode decodeFunc
+// DecodeFunc is a function for decoding a value from bytes
+type DecodeFunc func(data []byte, value interface{}) error
 
-func defaultEncode(value interface{}) ([]byte, error) {
+var encode EncodeFunc
+var decode DecodeFunc
+
+// DefaultEncode is the default encoding func for bolthold
+func DefaultEncode(value interface{}) ([]byte, error) {
 	var buff bytes.Buffer
 
 	en := gob.NewEncoder(&buff)
@@ -28,7 +32,8 @@ func defaultEncode(value interface{}) ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
-func defaultDecode(data []byte, value interface{}) error {
+// DefaultDecode is the default decoding func for bolthold
+func DefaultDecode(data []byte, value interface{}) error {
 	var buff bytes.Buffer
 	de := gob.NewDecoder(&buff)
 
