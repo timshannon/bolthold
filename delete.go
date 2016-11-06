@@ -10,6 +10,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
+//TODO: Store data type in index so that it doesn't need to be passed into deletes
+
 // Delete deletes a record from the bolthold, datatype just needs to be an example of the type stored so that
 // indexes can be updated
 func (s *Store) Delete(key, dataType interface{}) error {

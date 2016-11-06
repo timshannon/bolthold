@@ -292,12 +292,12 @@ var tests = []test{
 		result: []int{1, 3, 8, 9, 11},
 	},
 	test{
-		name:   "Chained And Query",
+		name:   "Chained And Query with non-index lead",
 		query:  bolthold.Where("Created").Gt(time.Now()).And("Category").Eq("vehicle"),
 		result: []int{1, 3, 11},
 	},
 	test{
-		name:   "Multiple Chained And Queries",
+		name:   "Multiple Chained And Queries with non-index lead",
 		query:  bolthold.Where("Created").Gt(time.Now()).And("Category").Eq("vehicle").And("ID").Ge(10),
 		result: []int{11},
 	},
@@ -491,7 +491,7 @@ func TestQueryStringPrint(t *testing.T) {
 		"ThirdField matches the regular expression test",
 	}
 
-	// map order isn't guarenteed, check if all needed lines exist
+	// map order isn't guaranteed, check if all needed lines exist
 
 	tst := fmt.Sprintf("%s", q)
 

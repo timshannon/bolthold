@@ -376,7 +376,6 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	}
 
 	sliceVal := resultVal.Elem()
-	//sliceVal = sliceVal.Slice(0, 0) // empty slice
 
 	elType := sliceVal.Type().Elem()
 
