@@ -18,7 +18,7 @@ type DecodeFunc func(data []byte, value interface{}) error
 var encode EncodeFunc
 var decode DecodeFunc
 
-// DefaultEncode is the default encoding func for bolthold
+// DefaultEncode is the default encoding func for bolthold (Gob)
 func DefaultEncode(value interface{}) ([]byte, error) {
 	var buff bytes.Buffer
 
@@ -32,7 +32,7 @@ func DefaultEncode(value interface{}) ([]byte, error) {
 	return buff.Bytes(), nil
 }
 
-// DefaultDecode is the default decoding func for bolthold
+// DefaultDecode is the default decoding func for bolthold (Gob)
 func DefaultDecode(data []byte, value interface{}) error {
 	var buff bytes.Buffer
 	de := gob.NewDecoder(&buff)

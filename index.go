@@ -19,7 +19,7 @@ const indexBucketPrefix = "_index"
 // size of iterator keys stored in memory before more are fetched
 const iteratorKeyMinCacheSize = 100
 
-// Index is a function that returns the indexable bytes of the passed in value
+// Index is a function that returns the indexable, encoded bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
 // adds an item to the index
@@ -151,8 +151,6 @@ type iterator struct {
 	err         error
 }
 
-// TODO: Use cursor.Seek() by looking at query criteria to skip uncessary reads and seek to the earliest potential record
-
 func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	iter := &iterator{
@@ -176,7 +174,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = cursor.First()
+					k, _ = seekCursor(cursor, criteria)
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -241,7 +239,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		for len(nKeys) < iteratorKeyMinCacheSize {
 			var k, v []byte
 			if prepCursor {
-				k, v = cursor.First()
+				k, v = seekCursor(cursor, criteria)
 				prepCursor = false
 			} else {
 				k, v = cursor.Next()
@@ -272,6 +270,26 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	return iter
 
+}
+
+// seekCursor preps usually will simply set the cursor to the first k/v and return it,
+// however if there is only one critrion and it is either > = or >= then we can seek to the value and
+// save reads
+func seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
+	if len(criteria) != 1 {
+		return cursor.First()
+	}
+
+	if criteria[0].operator == gt || criteria[0].operator == ge || criteria[0].operator == eq {
+		seek, err := encode(criteria[0].value)
+		if err != nil {
+			return cursor.First()
+		}
+
+		return cursor.Seek(seek)
+	}
+
+	return cursor.First()
 }
 
 // findIndexBucket returns the index bucket from the query, and if not found, tries to find the next available index

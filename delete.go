@@ -10,10 +10,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-//TODO: Store data type in index so that it doesn't need to be passed into deletes
-
 // Delete deletes a record from the bolthold, datatype just needs to be an example of the type stored so that
-// indexes can be updated
+// the proper bucket and indexes are updated
 func (s *Store) Delete(key, dataType interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return s.TxDelete(tx, key, dataType)
@@ -64,7 +62,6 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 }
 
 // DeleteMatching deletes all of the records that match the passed in query
-// datatype is needed so indexes can be properly updated
 func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return s.TxDeleteMatching(tx, dataType, query)

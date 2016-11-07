@@ -10,10 +10,10 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// ErrNotFound is the error returned no data is found for the given key
+// ErrNotFound is returned when no data is found for the given key
 var ErrNotFound = errors.New("No data found for this key")
 
-// Get retrieves a value from the bolthold and puts it into result
+// Get retrieves a value from bolthold and puts it into result.  Result must be a pointer
 func (s *Store) Get(key, result interface{}) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
 		return s.TxGet(tx, key, result)
@@ -46,7 +46,8 @@ func (s *Store) exists(tx *bolt.Tx, key []byte, storer Storer) bool {
 
 // Find retrieves a set of values from the bolthold that matches the passed in query
 // result must be a pointer to a slice.
-// The result of the query will be appended to the passed in result slice
+// The result of the query will be appended to the passed in result slice, rather than the passed in slice being
+// emptied.
 func (s *Store) Find(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
 		return s.TxFind(tx, result, query)
