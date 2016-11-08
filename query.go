@@ -33,6 +33,7 @@ func Key() string {
 }
 
 // Query is a chained collection of criteria of which an object in the bolthold needs to match to be returned
+// an empty query matches against all records
 type Query struct {
 	index         string
 	currentField  string

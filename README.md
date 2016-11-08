@@ -39,4 +39,16 @@ option of *Insert* (fails if key already exists), *Update* (fails if key doesn't
 exist, it inserts the data).
 
 ## When should I use BoltHold?
+BoltHold will be useful in any scenario where BoltDB is useful, with the added benefit of being able to retire some of your data filtering code.
 
+You can also use it instead of SQLite for many scenarios.  BoltHold's main benefit over SQLite is it's simplicity when working
+with Go Types.  There is no need for an ORM layer to translate records to types, simply put types in, and get types out.
+You also don't have to deal with database initialization.  Usually with SQLite you'll need several scripts to create the
+database, create the tables you expect, and create any indexes.  With BoltHold you simply open a new file and put any
+type of data you want in it.
+
+```
+
+	store, err := bolthold.Open(filename, 0666, nil)
+
+```
