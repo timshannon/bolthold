@@ -341,11 +341,6 @@ var tests = []test{
 		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key()).Eq(testData[4].key()),
 		result: []int{4},
 	},
-	test{
-		name:   "Test Key in secondary",
-		query:  bolthold.Where("ID").Eq(int32(0)),
-		result: []int{0},
-	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
