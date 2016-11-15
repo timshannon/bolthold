@@ -60,6 +60,13 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Regular Expression - `Where("field").RegExp(regexp.MustCompile("ea"))`
 * Matches Function - `Where("field").MatchFunc(func(field interface{}) (bool, error))`
 
+If you want to run a query's criteria against the Key value, you can use the `bolthold.Key()` function:
+```Go
+
+store.Find(&result, bolthold.Where(bolthold.Key()).Ne(value))
+
+```
+
 Instead of passing in a specific value to compare against in a query, you can compare against another field in the same
 struct.  Consider the following struct:
 
@@ -80,16 +87,9 @@ store.Find(&result, bolthold.Where("Death").Lt(bolthold.Field("Birth")))
 
 ```
 
-If you want to run a query's criteria against the Key value, you can use the `bolthold.Key()` function:
-```Go
-
-store.Find(&result, bolthold.Where(bolthold.Key()).Ne(value))
-
-```
-
 Queries can be used in more than just selecting data.  You can delete or update data that matches a query.
 
-Using the example above, if you wanted to remove all of the invalid record:
+Using the example above, if you wanted to remove all of the invalid records where Death < Birth:
 
 ```Go
 
@@ -98,7 +98,7 @@ store.DeleteMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 
 ```
 
-Or if you wanted to update all the invalid record to flip/flop the Birth and Death Dates:
+Or if you wanted to update all the invalid records to flip/flop the Birth and Death dates:
 ```Go
 
 store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth")), func(record interface{}) error {
