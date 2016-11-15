@@ -18,7 +18,7 @@ type ErrTypeMismatch struct {
 }
 
 func (e *ErrTypeMismatch) Error() string {
-	return fmt.Sprintf("%v cannot be compared with %v", e.Value, e.Other)
+	return fmt.Sprintf("%v (%T) cannot be compared with %v (%T)", e.Value, e.Value, e.Other, e.Other)
 }
 
 //Comparer compares a type against the encoded value in the store. The result should be 0 if current==other,
@@ -62,15 +62,16 @@ func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
 
 	switch t := value.(type) {
 	case time.Time:
-		other, ok := other.(time.Time)
+		tother, ok := other.(time.Time)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
-		if value.(time.Time).Equal(other) {
+
+		if value.(time.Time).Equal(tother) {
 			return 0, nil
 		}
 
-		if value.(time.Time).Before(other) {
+		if value.(time.Time).Before(tother) {
 			return -1, nil
 		}
 		return 1, nil
@@ -102,188 +103,188 @@ func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
 
 		return v.Cmp(&o), nil
 	case int:
-		other, ok := other.(int)
+		tother, ok := other.(int)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(int) == other {
+		if value.(int) == tother {
 			return 0, nil
 		}
 
-		if value.(int) < other {
+		if value.(int) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case int8:
-		other, ok := other.(int8)
+		tother, ok := other.(int8)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(int8) == other {
+		if value.(int8) == tother {
 			return 0, nil
 		}
 
-		if value.(int8) < other {
+		if value.(int8) < tother {
 			return -1, nil
 		}
 		return 1, nil
 
 	case int16:
-		other, ok := other.(int16)
+		tother, ok := other.(int16)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(int16) == other {
+		if value.(int16) == tother {
 			return 0, nil
 		}
 
-		if value.(int16) < other {
+		if value.(int16) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case int32:
-		other, ok := other.(int32)
+		tother, ok := other.(int32)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(int32) == other {
+		if value.(int32) == tother {
 			return 0, nil
 		}
 
-		if value.(int32) < other {
+		if value.(int32) < tother {
 			return -1, nil
 		}
 		return 1, nil
 
 	case int64:
-		other, ok := other.(int64)
+		tother, ok := other.(int64)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(int64) == other {
+		if value.(int64) == tother {
 			return 0, nil
 		}
 
-		if value.(int64) < other {
+		if value.(int64) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case uint:
-		other, ok := other.(uint)
+		tother, ok := other.(uint)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(uint) == other {
+		if value.(uint) == tother {
 			return 0, nil
 		}
 
-		if value.(uint) < other {
+		if value.(uint) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case uint8:
-		other, ok := other.(uint8)
+		tother, ok := other.(uint8)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(uint8) == other {
+		if value.(uint8) == tother {
 			return 0, nil
 		}
 
-		if value.(uint8) < other {
+		if value.(uint8) < tother {
 			return -1, nil
 		}
 		return 1, nil
 
 	case uint16:
-		other, ok := other.(uint16)
+		tother, ok := other.(uint16)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(uint16) == other {
+		if value.(uint16) == tother {
 			return 0, nil
 		}
 
-		if value.(uint16) < other {
+		if value.(uint16) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case uint32:
-		other, ok := other.(uint32)
+		tother, ok := other.(uint32)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(uint32) == other {
+		if value.(uint32) == tother {
 			return 0, nil
 		}
 
-		if value.(uint32) < other {
+		if value.(uint32) < tother {
 			return -1, nil
 		}
 		return 1, nil
 
 	case uint64:
-		other, ok := other.(uint64)
+		tother, ok := other.(uint64)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(uint64) == other {
+		if value.(uint64) == tother {
 			return 0, nil
 		}
 
-		if value.(uint64) < other {
+		if value.(uint64) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case float32:
-		other, ok := other.(float32)
+		tother, ok := other.(float32)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(float32) == other {
+		if value.(float32) == tother {
 			return 0, nil
 		}
 
-		if value.(float32) < other {
+		if value.(float32) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case float64:
-		other, ok := other.(float64)
+		tother, ok := other.(float64)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(float64) == other {
+		if value.(float64) == tother {
 			return 0, nil
 		}
 
-		if value.(float64) < other {
+		if value.(float64) < tother {
 			return -1, nil
 		}
 		return 1, nil
 	case string:
-		other, ok := other.(string)
+		tother, ok := other.(string)
 		if !ok {
 			return 0, &ErrTypeMismatch{t, other}
 		}
 
-		if value.(string) == other {
+		if value.(string) == tother {
 			return 0, nil
 		}
 
-		if value.(string) < other {
+		if value.(string) < tother {
 			return -1, nil
 		}
 		return 1, nil

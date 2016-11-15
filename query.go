@@ -74,13 +74,13 @@ type Field string
 // Where starts a query for specifying the criteria that an object in the bolthold needs to match to
 // be returned in a Find result
 /*
-	Query API Example
+Query API Example
 
 	s.Find(Where("Name").Eq("Tim Shannon").And("DOB").Lt(time.Now()).
 		Or(Where("Title").Eq("Boss").And("DOB").Lt(time.Now())))
 
 
-	Since Gobs only encode exported fields, this will panic if you pass in a field with a lower case first letter
+Since Gobs only encode exported fields, this will panic if you pass in a field with a lower case first letter
 */
 func Where(field string) *Criterion {
 	if !startsUpper(field) {
