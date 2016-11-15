@@ -17,13 +17,14 @@ import (
 )
 
 type ItemTest struct {
-	ID       int
-	Name     string
-	Category string `boltholdIndex:"Category"`
-	Created  time.Time
-	Tags     []string
-	Color    string
-	Fruit    string
+	ID          int
+	Name        string
+	Category    string `boltholdIndex:"Category"`
+	Created     time.Time
+	Tags        []string
+	Color       string
+	Fruit       string
+	UpdateField string
 }
 
 func (i *ItemTest) key() string {

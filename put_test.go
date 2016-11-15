@@ -5,6 +5,7 @@
 package bolthold_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -204,4 +205,66 @@ func TestUpsertReadTxn(t *testing.T) {
 		}
 
 	})
+}
+
+func TestUpdateMatching(t *testing.T) {
+	for _, tst := range tests {
+		t.Run(tst.name, func(t *testing.T) {
+			testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+				insertTestData(t, store)
+
+				err := store.UpdateMatching(&ItemTest{}, tst.query, func(record interface{}) error {
+					update, ok := record.(*ItemTest)
+					if !ok {
+						return fmt.Errorf("Record isn't the correct type!  Wanted Itemtest, got %T", record)
+					}
+
+					update.UpdateField = "updated"
+
+					return nil
+				})
+
+				if err != nil {
+					t.Fatalf("Error updating data from bolthold: %s", err)
+				}
+
+				var result []ItemTest
+				err = store.Find(&result, bolthold.Where("UpdateField").Eq("updated"))
+				if err != nil {
+					t.Fatalf("Error finding result after update from bolthold: %s", err)
+				}
+
+				if len(result) != len(tst.result) {
+					if testing.Verbose() {
+						t.Fatalf("Find result count after update is %d wanted %d.  Results: %v",
+							len(result), len(tst.result), result)
+					}
+					t.Fatalf("Find result count after update is %d wanted %d.", len(result),
+						len(tst.result))
+				}
+
+				for i := range result {
+					found := false
+					for k := range tst.result {
+						if result[i].key() == testData[tst.result[k]].key() &&
+							result[i].UpdateField == "updated" {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						if testing.Verbose() {
+							t.Fatalf("Could not find %v in the update result set! Full results: %v",
+								result[i], result)
+						}
+						t.Fatalf("Could not find %v in the updated result set!", result[i])
+					}
+				}
+
+			})
+
+		})
+	}
 }

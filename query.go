@@ -520,3 +520,95 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 	return nil
 
 }
+
+func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error,
+	updatedKeys keyList) error {
+	if query == nil {
+		query = &Query{}
+	}
+	storer := newStorer(dataType)
+
+	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
+		dataType = reflect.ValueOf(dataType).Elem().Interface()
+	}
+
+	iter := newIterator(tx, storer.Type(), query)
+
+	newKeys := make(keyList, 0)
+
+	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
+
+		if len(updatedKeys) != 0 {
+			// don't check this record if it's already been updated
+			if updatedKeys.in(k) {
+				continue
+			}
+		}
+
+		val := reflect.New(reflect.TypeOf(dataType))
+
+		err := decode(v, val.Interface())
+		if err != nil {
+			return err
+		}
+
+		query.currentRow = val.Interface()
+
+		ok, err := query.matchesAllFields(k, val)
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			upVal := val.Interface()
+			err = update(upVal)
+			if err != nil {
+				return err
+			}
+
+			encVal, err := encode(upVal)
+			if err != nil {
+				return err
+			}
+
+			b := tx.Bucket([]byte(storer.Type()))
+			err = b.Put(k, encVal)
+			if err != nil {
+				return err
+			}
+
+			// delete any existing indexes
+			err = indexDelete(storer, tx, k, upVal)
+			if err != nil {
+				return err
+			}
+			// insert any new indexes
+			err = indexAdd(storer, tx, k, upVal)
+			if err != nil {
+				return err
+			}
+
+			newKeys.add(k)
+		}
+	}
+
+	if iter.Error() != nil {
+		return iter.Error()
+	}
+
+	if len(query.ors) > 0 {
+		for i := range newKeys {
+			updatedKeys.add(newKeys[i])
+		}
+
+		for i := range query.ors {
+			err := updateQuery(tx, dataType, query.ors[i], update, updatedKeys)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+
+}

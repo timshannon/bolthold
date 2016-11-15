@@ -178,4 +178,15 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	return nil
 }
 
-//TODO: UpdateMatching(query, updateFunc(record interface{}) error)
+// UpdateMatching runs the update function for every record that match the passed in query
+// Note that the type  of record in the update func always has to be a pointer
+func (s *Store) UpdateMatching(dataType interface{}, query *Query, update func(record interface{}) error) error {
+	return s.Bolt().Update(func(tx *bolt.Tx) error {
+		return s.TxUpdateMatching(tx, dataType, query, update)
+	})
+}
+
+// TxUpdateMatching does the same as UpdateMatching, but allows you to specify your own transaction
+func (s *Store) TxUpdateMatching(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
+	return updateQuery(tx, dataType, query, update, nil)
+}

@@ -87,6 +87,32 @@ store.Find(&result, bolthold.Where(bolthold.Key()).Ne(value))
 
 ```
 
+Queries can be used in more than just selecting data.  You can delete or update data that matches a query.
+
+Using the example above, if you wanted to remove all of the invalid record:
+
+```Go
+
+// you must pass in a sample type, so BoltHold knows which bucket to use and what indexes to update
+store.DeleteMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth")))
+
+```
+
+Or if you wanted to update all the invalid record to flip/flop the Birth and Death Dates:
+```Go
+
+store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth")), func(record interface{}) error {
+	update, ok := record.(*Person) // record will always be a pointer
+	if !ok {
+		return fmt.Errorf("Record isn't the correct type!  Wanted Person, got %T", record)
+	}
+
+	update.Birth, updated.Death = updated.Death, updated.Birth
+
+	return nil
+})
+```
+
 ## Comparing
 
 Just like with Go, types must be the same in order to be compared with each other.  You cannot compare an int to a int32.
@@ -109,7 +135,9 @@ have the options of:
 
 When getting data instead of returning `nil` if a value doesn't exist, BoltHold returns `boldhold.ErrNotFound`, and
 similarly when deleting data, instead of silently continuing if a value isn't found to delete, BoltHold returns 
-`bolthold.ErrNotFound`.
+`bolthold.ErrNotFound`.  The exception to this is when using query based functions such as `Find`, `DeleteMatching`, 
+and `UpdateMatching`.
+
 
 ## When should I use BoltHold?
 BoltHold will be useful in the same scenarios where BoltDB is useful, with the added benefit of being able to retire 

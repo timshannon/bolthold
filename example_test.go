@@ -71,7 +71,7 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	// Find all items in the blue category that have been update in the past hour
+	// Find all items in the blue category that have been created in the past hour
 	var result []Item
 
 	err = store.Find(&result, bolthold.Where("Category").Eq("blue").And("Created").Ge(time.Now().Add(-1*time.Hour)))
