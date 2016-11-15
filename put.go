@@ -177,3 +177,5 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 
 	return nil
 }
+
+//TODO: UpdateMatching(query, updateFunc(record interface{}) error)

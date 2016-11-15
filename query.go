@@ -76,9 +76,7 @@ type Field string
 /*
 Query API Example
 
-	s.Find(Where("Name").Eq("Tim Shannon").And("DOB").Lt(time.Now()).
-		Or(Where("Title").Eq("Boss").And("DOB").Lt(time.Now())))
-
+	s.Find(bolthold.Where("FieldName").Eq(value).And("AnotherField").Lt(AnotherValue).Or(bolthold.Where("FieldName").Eq(anotherValue)
 
 Since Gobs only encode exported fields, this will panic if you pass in a field with a lower case first letter
 */

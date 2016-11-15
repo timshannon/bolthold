@@ -95,14 +95,14 @@ can also be compared such as `time.Time`, `big.Rat`, `big.Int`, and `big.Float`.
 types that I missed, let me know.
 
 You can compare any custom type either by using the `MatchFunc` criteria, or by satisfying the `Comparer` interface with
-your type `Compare(other interface{}) (int, error)` by adding the Compare method.
+your type by adding the Compare method: `Compare(other interface{}) (int, error)`.
 
 If a type doesn't have a predefined comparer, and doesn't satisfy the Comparer interface, then types value is converted
 to a string and compared lexicographically.
 
 ## Behavior Changes
-Since BoltHold is a higher level interface than BoltDB, there are some added helper functions.  Instead of *Put*, you
-have the options of 
+Since BoltHold is a higher level interface than BoltDB, there are some added helpers.  Instead of *Put*, you
+have the options of: 
 * *Insert* - Fails if key already exists.
 * *Update* - Fails if key doesn't exist `ErrNotFound`.
 * *Upsert* - If key doesn't exist, it inserts the data, otherwise it updates the existing record.
@@ -122,15 +122,14 @@ to create the database, create the tables you expect, and create any indexes.  W
 and put any type of data you want in it.
 
 ```Go
-	store, err := bolthold.Open(filename, 0666, nil)
-	if err != nil {
-		//handle error
-	}
-	err = store.Insert("key", &Item{
-		Name:    "Test Name",
-		Created: time.Now(),
-	})
-)
+store, err := bolthold.Open(filename, 0666, nil)
+if err != nil {
+	//handle error
+}
+err = store.Insert("key", &Item{
+	Name:    "Test Name",
+	Created: time.Now(),
+})
 
 ```
 
