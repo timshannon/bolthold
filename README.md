@@ -113,6 +113,9 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 })
 ```
 
+Many more examples of queries can be found in the [find_test.go](https://github.com/timshannon/bolthold/blob/master/find_test.go) 
+file in this repository.
+
 ## Comparing
 
 Just like with Go, types must be the same in order to be compared with each other.  You cannot compare an int to a int32.
