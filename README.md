@@ -138,8 +138,8 @@ have the options of:
 
 When getting data instead of returning `nil` if a value doesn't exist, BoltHold returns `boldhold.ErrNotFound`, and
 similarly when deleting data, instead of silently continuing if a value isn't found to delete, BoltHold returns 
-`bolthold.ErrNotFound`.  The exception to this is when using query based functions such as `Find`, `DeleteMatching`, 
-and `UpdateMatching`.
+`bolthold.ErrNotFound`.  The exception to this is when using query based functions such as `Find` (returns an empty slice), 
+`DeleteMatching` and `UpdateMatching` where no error is returned.
 
 
 ## When should I use BoltHold?
