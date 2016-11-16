@@ -44,7 +44,7 @@ Queries will be chain-able constructs that filters out any data that doesn't mat
 
 Queries will look like this:
 ```Go
-s.Find(bolthold.Where("FieldName").Eq(value).And("AnotherField").Lt(AnotherValue).Or(bolthold.Where("FieldName").Eq(anotherValue)
+s.Find(bolthold.Where("FieldName").Eq(value).And("AnotherField").Lt(AnotherValue).Or(bolthold.Where("FieldName").Eq(anotherValue)))
 
 ```
 
