@@ -126,7 +126,7 @@ types that I missed, let me know.
 You can compare any custom type either by using the `MatchFunc` criteria, or by satisfying the `Comparer` interface with
 your type by adding the Compare method: `Compare(other interface{}) (int, error)`.
 
-If a type doesn't have a predefined comparer, and doesn't satisfy the Comparer interface, then types value is converted
+If a type doesn't have a predefined comparer, and doesn't satisfy the Comparer interface, then the types value is converted
 to a string and compared lexicographically.
 
 ## Behavior Changes
