@@ -146,7 +146,7 @@ similarly when deleting data, instead of silently continuing if a value isn't fo
 BoltHold will be useful in the same scenarios where BoltDB is useful, with the added benefit of being able to retire 
 some of your data filtering code and possibly improved performance.
 
-You can also use it instead of SQLite for many scenarios.  BoltHold's main benefit over SQLite is it's simplicity when 
+You can also use it instead of SQLite for many scenarios.  BoltHold's main benefit over SQLite is its simplicity when 
 working with Go Types.  There is no need for an ORM layer to translate records to types, simply put types in, and get 
 types out.  You also don't have to deal with database initialization.  Usually with SQLite you'll need several scripts 
 to create the database, create the tables you expect, and create any indexes.  With BoltHold you simply open a new file 
