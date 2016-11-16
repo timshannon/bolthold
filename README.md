@@ -3,9 +3,9 @@
 
 BoltHold is a simple querying and indexing layer on top of a Bolt DB instance. The goal is to create a simple,
 higher level interface on top of Bolt DB that simplifies dealing with Go Types and finding data, but exposes the underlying 
-Bolt DB for customizing as you wish.  By default the encoding used is Gob, so feel free to `gob.Register` any types you 
-wish, or use the GobEncoder/Decoder interface for faster serialization.  Or you can use any serialization you want by 
-supplying encode / decode funcs to the `Options` struct on Open.
+Bolt DB for customizing as you wish.  By default the encoding used is Gob, so feel free to use the GobEncoder/Decoder 
+interface for faster serialization.  Or, alternately, you can use any serialization you want by supplying encode / decode 
+funcs to the `Options` struct on Open.
 
 One Go Type will have one bucket, and multiple index buckets in a BoltDB file, so you can store multiple Go Types in the
 same database.
