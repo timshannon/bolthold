@@ -247,7 +247,7 @@ func TestUpdateMatching(t *testing.T) {
 				for i := range result {
 					found := false
 					for k := range tst.result {
-						if result[i].key() == testData[tst.result[k]].key() &&
+						if result[i].Key == testData[tst.result[k]].Key &&
 							result[i].UpdateField == "updated" {
 							found = true
 							break

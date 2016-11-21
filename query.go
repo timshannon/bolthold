@@ -27,10 +27,8 @@ const (
 )
 
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
-// Where(bolthold.Key()).Eq("testkey")
-func Key() string {
-	return ""
-}
+// Where(bolthold.Key).Eq("testkey")
+const Key = ""
 
 // Query is a chained collection of criteria of which an object in the bolthold needs to match to be returned
 // an empty query matches against all records
@@ -41,6 +39,9 @@ type Query struct {
 	ors           []*Query
 	badIndex      bool
 	currentRow    interface{}
+
+	limit int64
+	skip  int64
 }
 
 // IsEmpty returns true if the query is an empty query
@@ -106,8 +107,45 @@ func (q *Query) And(field string) *Criterion {
 	}
 }
 
+// Skip skips the number of records that match all the rest of the query criteria, and does not return them
+// in the result set.  Setting skip multiple times, or to a negative value will panic
+func (q *Query) Skip(amount int64) *Query {
+	if amount < 0 {
+		panic("Skip must be set to a postive number")
+	}
+
+	if q.skip != 0 {
+		panic(fmt.Sprintf("Skip has already been set to %d", q.skip))
+	}
+
+	q.skip = amount
+
+	return q
+}
+
+// Limit sets the maximum number of records that can be returned by a query
+// Setting Limit multiple times, or to a negative value will panic
+func (q *Query) Limit(amount int64) *Query {
+	if amount < 0 {
+		panic("Limit must be set to a postive number")
+	}
+
+	if q.limit != 0 {
+		panic(fmt.Sprintf("Limit has already been set to %d", q.limit))
+	}
+
+	q.limit = amount
+
+	return q
+}
+
 // Or creates another separate query that gets unioned with any other results in the query
+// Or will panic if the query passed in contains a limit or skip value, as they are only
+// allowed on top level queries
 func (q *Query) Or(query *Query) *Query {
+	if q.skip != 0 || q.limit != 0 {
+		panic("Or'd queries cannot contain skip or limit values")
+	}
 	q.ors = append(q.ors, query)
 	return q
 }
@@ -123,7 +161,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) 
 			continue
 		}
 
-		if field == Key() {
+		if field == Key {
 			ok, err := matchesAllCriteria(criteria, key, true)
 			if err != nil {
 				return false, err
@@ -365,7 +403,7 @@ func (c *Criterion) String() string {
 	return s + " " + fmt.Sprintf("%v", c.value)
 }
 
-func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList) error {
+func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList, skip int64) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -388,6 +426,11 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	iter := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query)
 
 	newKeys := make(keyList, 0)
+
+	//limit := query.limit
+	//if limit != 0 {
+	//limit = query.limit - int64(len(retrievedKeys))
+	//}
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 
@@ -413,6 +456,11 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 		}
 
 		if ok {
+			if skip > 0 {
+				skip--
+				continue
+			}
+
 			// add to result
 			if oType.Kind() == reflect.Ptr {
 				sliceVal = reflect.Append(sliceVal, val)
@@ -422,6 +470,13 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 			// track that this key's entry has been added to the result list
 			newKeys.add(k)
 		}
+
+		//if query.limit != 0 {
+		//if limit == 0 {
+		//break
+		//}
+		//limit--
+		//}
 	}
 
 	if iter.Error() != nil {
@@ -430,13 +485,13 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 
-	if len(query.ors) > 0 {
+	if len(query.ors) > 0 { //&& limit != 0{
 		for i := range newKeys {
 			retrievedKeys.add(newKeys[i])
 		}
 
 		for i := range query.ors {
-			err := runQuery(tx, result, query.ors[i], retrievedKeys)
+			err := runQuery(tx, result, query.ors[i], retrievedKeys, skip)
 			if err != nil {
 				return err
 			}

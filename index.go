@@ -164,9 +164,9 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	// 3 scenarios
 	//   Key field
-	if query.index == Key() {
+	if query.index == Key {
 		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
-		criteria := query.fieldCriteria[Key()]
+		criteria := query.fieldCriteria[Key]
 
 		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
 			var nKeys [][]byte

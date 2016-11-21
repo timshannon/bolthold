@@ -38,7 +38,8 @@ func TestFindWithComparer(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		data := []CItemTest{
 			CItemTest{
-				Inner: ItemTest{ //0
+				Inner: ItemTest{
+					Key:      0,
 					ID:       0,
 					Name:     "car",
 					Category: "vehicle",
@@ -46,7 +47,8 @@ func TestFindWithComparer(t *testing.T) {
 				},
 			},
 			CItemTest{
-				Inner: ItemTest{ //1
+				Inner: ItemTest{
+					Key:      1,
 					ID:       1,
 					Name:     "truck",
 					Category: "vehicle",
@@ -54,7 +56,8 @@ func TestFindWithComparer(t *testing.T) {
 				},
 			},
 			CItemTest{
-				Inner: ItemTest{ //2
+				Inner: ItemTest{
+					Key:      2,
 					ID:       2,
 					Name:     "seal",
 					Category: "animal",
@@ -64,7 +67,7 @@ func TestFindWithComparer(t *testing.T) {
 		}
 
 		for i := range data {
-			err := store.Insert(data[i].Inner.key(), data[i])
+			err := store.Insert(data[i].Inner.Key, data[i])
 			if err != nil {
 				t.Fatalf("Error inserting CItemData for comparer test %s", err)
 			}
