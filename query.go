@@ -40,8 +40,8 @@ type Query struct {
 	badIndex      bool
 	currentRow    interface{}
 
-	limit int64
-	skip  int64
+	limit int
+	skip  int
 }
 
 // IsEmpty returns true if the query is an empty query
@@ -109,7 +109,7 @@ func (q *Query) And(field string) *Criterion {
 
 // Skip skips the number of records that match all the rest of the query criteria, and does not return them
 // in the result set.  Setting skip multiple times, or to a negative value will panic
-func (q *Query) Skip(amount int64) *Query {
+func (q *Query) Skip(amount int) *Query {
 	if amount < 0 {
 		panic("Skip must be set to a postive number")
 	}
@@ -125,7 +125,7 @@ func (q *Query) Skip(amount int64) *Query {
 
 // Limit sets the maximum number of records that can be returned by a query
 // Setting Limit multiple times, or to a negative value will panic
-func (q *Query) Limit(amount int64) *Query {
+func (q *Query) Limit(amount int) *Query {
 	if amount < 0 {
 		panic("Limit must be set to a postive number")
 	}
@@ -403,7 +403,7 @@ func (c *Criterion) String() string {
 	return s + " " + fmt.Sprintf("%v", c.value)
 }
 
-func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList, skip int64) error {
+func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList, skip int) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -501,7 +501,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	return nil
 }
 
-func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList, skip int64) error {
+func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList, skip int) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -581,7 +581,7 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 }
 
 func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error,
-	updatedKeys keyList, skip int64) error {
+	updatedKeys keyList, skip int) error {
 	if query == nil {
 		query = &Query{}
 	}
