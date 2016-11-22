@@ -359,6 +359,16 @@ var tests = []test{
 		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Skip(3),
 		result: []int{14, 15, 16},
 	},
+	test{
+		name:   "Skip Past Len",
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Skip(9),
+		result: []int{},
+	},
+	//test{
+	//name:   "Limit",
+	//query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
+	//result: []int{11, 12, 13, 14, 15},
+	//},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -580,35 +590,6 @@ func TestSkip(t *testing.T) {
 				}
 				t.Fatalf("%v should not be in the result set!", result[i])
 			}
-		}
-
-	})
-}
-
-func TestSkipPastLen(t *testing.T) {
-	testWrap(t, func(store *bolthold.Store, t *testing.T) {
-		insertTestData(t, store)
-		var result []ItemTest
-
-		q := bolthold.Where("Category").Eq("vehicle") // returns 5 records
-
-		err := store.Find(&result, q)
-
-		if err != nil {
-			t.Fatalf("Error retrieving data for skip test.")
-		}
-
-		var skipResult []ItemTest
-		skip := 6
-
-		err = store.Find(&skipResult, q.Skip(skip))
-		if err != nil {
-			t.Fatalf("Error retrieving data for skip test on the skip query.")
-		}
-
-		if len(skipResult) != 0 {
-			t.Fatalf("Skip query didn't return the right number of records: Wanted %d got %d",
-				0, len(skipResult))
 		}
 
 	})

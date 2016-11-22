@@ -429,7 +429,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 
 	//limit := query.limit
 	//if limit != 0 {
-	//limit = query.limit - int64(len(retrievedKeys))
+	//limit = query.limit - len(retrievedKeys)
 	//}
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
@@ -485,7 +485,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 
-	if len(query.ors) > 0 { //&& limit != 0{
+	if len(query.ors) > 0 { // && limit != 0 {
 		for i := range newKeys {
 			retrievedKeys.add(newKeys[i])
 		}
