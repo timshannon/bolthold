@@ -501,7 +501,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	return nil
 }
 
-func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList) error {
+func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList, skip int64) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -539,6 +539,10 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 		}
 
 		if ok {
+			if skip > 0 {
+				skip--
+				continue
+			}
 			b := tx.Bucket([]byte(storer.Type()))
 			err = b.Delete(k)
 			if err != nil {
@@ -565,7 +569,7 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 		}
 
 		for i := range query.ors {
-			err := deleteQuery(tx, dataType, query.ors[i], deletedKeys)
+			err := deleteQuery(tx, dataType, query.ors[i], deletedKeys, skip)
 			if err != nil {
 				return err
 			}
@@ -577,7 +581,7 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 }
 
 func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error,
-	updatedKeys keyList) error {
+	updatedKeys keyList, skip int64) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -615,6 +619,11 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 		}
 
 		if ok {
+			if skip > 0 {
+				skip--
+				continue
+			}
+
 			upVal := val.Interface()
 			err = update(upVal)
 			if err != nil {
@@ -657,7 +666,7 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 		}
 
 		for i := range query.ors {
-			err := updateQuery(tx, dataType, query.ors[i], update, updatedKeys)
+			err := updateQuery(tx, dataType, query.ors[i], update, updatedKeys, skip)
 			if err != nil {
 				return err
 			}
