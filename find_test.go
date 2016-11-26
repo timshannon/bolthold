@@ -364,6 +364,12 @@ var tests = []test{
 		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Skip(9),
 		result: []int{},
 	},
+	test{
+		name:   "Skip with Or query",
+		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(4),
+		result: []int{11, 2, 5, 8, 9, 13, 14, 16},
+	},
+
 	//test{
 	//name:   "Limit",
 	//query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
