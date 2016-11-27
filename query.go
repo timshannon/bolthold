@@ -111,7 +111,7 @@ func (q *Query) And(field string) *Criterion {
 // in the result set.  Setting skip multiple times, or to a negative value will panic
 func (q *Query) Skip(amount int) *Query {
 	if amount < 0 {
-		panic("Skip must be set to a postive number")
+		panic("Skip must be set to a positive number")
 	}
 
 	if q.skip != 0 {
@@ -127,7 +127,7 @@ func (q *Query) Skip(amount int) *Query {
 // Setting Limit multiple times, or to a negative value will panic
 func (q *Query) Limit(amount int) *Query {
 	if amount < 0 {
-		panic("Limit must be set to a postive number")
+		panic("Limit must be set to a positive number")
 	}
 
 	if q.limit != 0 {

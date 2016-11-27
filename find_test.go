@@ -370,7 +370,7 @@ var tests = []test{
 		result: []int{11, 2, 5, 8, 9, 13, 14, 16},
 	},
 	test{
-		name:   "Skip with Or query, that crosses or boundry",
+		name:   "Skip with Or query, that crosses or boundary",
 		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(8),
 		result: []int{9, 13, 14, 16},
 	},
