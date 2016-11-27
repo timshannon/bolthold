@@ -408,8 +408,10 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 
 	storer := newStorer(dataType)
 
-	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
-		dataType = reflect.ValueOf(dataType).Elem().Interface()
+	tp := dataType
+
+	for reflect.TypeOf(tp).Kind() == reflect.Ptr {
+		tp = reflect.ValueOf(tp).Elem().Interface()
 	}
 
 	iter := newIterator(tx, storer.Type(), query)
@@ -419,7 +421,6 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	limit := query.limit - len(retrievedKeys)
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
-
 		if len(retrievedKeys) != 0 {
 			// don't check this record if it's already been retrieved
 			if retrievedKeys.in(k) {
@@ -427,7 +428,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 			}
 		}
 
-		val := reflect.New(reflect.TypeOf(dataType))
+		val := reflect.New(reflect.TypeOf(tp))
 
 		err := decode(v, val.Interface())
 		if err != nil {
@@ -479,7 +480,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 		}
 
 		for i := range query.ors {
-			err := runQuery(tx, dataType, query.ors[i], retrievedKeys, skip, action)
+			err := runQuery(tx, tp, query.ors[i], retrievedKeys, skip, action)
 			if err != nil {
 				return err
 			}
@@ -503,15 +504,18 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 
 	elType := sliceVal.Type().Elem()
 
-	err := runQuery(tx, reflect.New(elType), query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
-		if elType.Kind() == reflect.Ptr {
-			sliceVal = reflect.Append(sliceVal, value)
-		} else {
-			sliceVal = reflect.Append(sliceVal, value.Elem())
-		}
+	val := reflect.New(elType)
 
-		return nil
-	})
+	err := runQuery(tx, val.Interface(), query, nil, query.skip,
+		func(key []byte, value reflect.Value, storer Storer) error {
+			if elType.Kind() == reflect.Ptr {
+				sliceVal = reflect.Append(sliceVal, value)
+			} else {
+				sliceVal = reflect.Append(sliceVal, value.Elem())
+			}
+
+			return nil
+		})
 
 	if err != nil {
 		return err
@@ -527,21 +531,22 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) error {
 		query = &Query{}
 	}
 
-	return runQuery(tx, dataType, query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
-		b := tx.Bucket([]byte(storer.Type()))
-		err := b.Delete(key)
-		if err != nil {
-			return err
-		}
+	return runQuery(tx, dataType, query, nil, query.skip,
+		func(key []byte, value reflect.Value, storer Storer) error {
+			b := tx.Bucket([]byte(storer.Type()))
+			err := b.Delete(key)
+			if err != nil {
+				return err
+			}
 
-		// remove any indexes
-		err = indexDelete(storer, tx, key, value.Interface())
-		if err != nil {
-			return err
-		}
+			// remove any indexes
+			err = indexDelete(storer, tx, key, value.Interface())
+			if err != nil {
+				return err
+			}
 
-		return nil
-	})
+			return nil
+		})
 }
 
 func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
@@ -549,36 +554,37 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 		query = &Query{}
 	}
 
-	return runQuery(tx, dataType, query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
+	return runQuery(tx, dataType, query, nil, query.skip,
+		func(key []byte, value reflect.Value, storer Storer) error {
 
-		upVal := value.Interface()
-		err := update(upVal)
-		if err != nil {
-			return err
-		}
+			upVal := value.Interface()
+			err := update(upVal)
+			if err != nil {
+				return err
+			}
 
-		encVal, err := encode(upVal)
-		if err != nil {
-			return err
-		}
+			encVal, err := encode(upVal)
+			if err != nil {
+				return err
+			}
 
-		b := tx.Bucket([]byte(storer.Type()))
-		err = b.Put(key, encVal)
-		if err != nil {
-			return err
-		}
+			b := tx.Bucket([]byte(storer.Type()))
+			err = b.Put(key, encVal)
+			if err != nil {
+				return err
+			}
 
-		// delete any existing indexes
-		err = indexDelete(storer, tx, key, upVal)
-		if err != nil {
-			return err
-		}
-		// insert any new indexes
-		err = indexAdd(storer, tx, key, upVal)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+			// delete any existing indexes
+			err = indexDelete(storer, tx, key, upVal)
+			if err != nil {
+				return err
+			}
+			// insert any new indexes
+			err = indexAdd(storer, tx, key, upVal)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 
 }
