@@ -188,5 +188,5 @@ func (s *Store) UpdateMatching(dataType interface{}, query *Query, update func(r
 
 // TxUpdateMatching does the same as UpdateMatching, but allows you to specify your own transaction
 func (s *Store) TxUpdateMatching(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
-	return updateQuery(tx, dataType, query, update, nil)
+	return updateQuery(tx, dataType, query, update)
 }

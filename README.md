@@ -60,10 +60,10 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Regular Expression - `Where("field").RegExp(regexp.MustCompile("ea"))`
 * Matches Function - `Where("field").MatchFunc(func(field interface{}) (bool, error))`
 
-If you want to run a query's criteria against the Key value, you can use the `bolthold.Key()` function:
+If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
 ```Go
 
-store.Find(&result, bolthold.Where(bolthold.Key()).Ne(value))
+store.Find(&result, bolthold.Where(bolthold.Key).Ne(value))
 
 ```
 

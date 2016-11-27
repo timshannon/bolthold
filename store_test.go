@@ -186,7 +186,7 @@ func TestAlternateEncoding(t *testing.T) {
 
 	var result []ItemTest
 
-	store.Find(&result, bolthold.Where(bolthold.Key()).Eq(tData.key()))
+	store.Find(&result, bolthold.Where(bolthold.Key).Eq(tData.Key))
 
 	if len(result) != 1 {
 		if testing.Verbose() {

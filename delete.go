@@ -70,5 +70,5 @@ func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
 
 // TxDeleteMatching does the same as DeleteMatching, but allows you to specify your own transaction
 func (s *Store) TxDeleteMatching(tx *bolt.Tx, dataType interface{}, query *Query) error {
-	return deleteQuery(tx, dataType, query, nil)
+	return deleteQuery(tx, dataType, query)
 }

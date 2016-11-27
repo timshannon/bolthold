@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +16,7 @@ import (
 )
 
 type ItemTest struct {
+	Key         int
 	ID          int
 	Name        string
 	Category    string `boltholdIndex:"Category"`
@@ -25,10 +25,6 @@ type ItemTest struct {
 	Color       string
 	Fruit       string
 	UpdateField string
-}
-
-func (i *ItemTest) key() string {
-	return strconv.Itoa(i.ID) + "_" + i.Name
 }
 
 func (i *ItemTest) equal(other *ItemTest) bool {
@@ -52,38 +48,43 @@ func (i *ItemTest) equal(other *ItemTest) bool {
 }
 
 var testData = []ItemTest{
-	ItemTest{ //0
+	ItemTest{
+		Key:      0,
 		ID:       0,
 		Name:     "car",
 		Category: "vehicle",
 		Created:  time.Now().AddDate(-1, 0, 0),
 	},
-	ItemTest{ //1
+	ItemTest{
+		Key:      1,
 		ID:       1,
 		Name:     "truck",
 		Category: "vehicle",
 		Created:  time.Now().AddDate(0, 30, 0),
 	},
-	ItemTest{ //2
-		ID:       2,
+	ItemTest{
+		Key:      2,
 		Name:     "seal",
 		Category: "animal",
 		Created:  time.Now().AddDate(-1, 0, 0),
 	},
-	ItemTest{ //3
+	ItemTest{
+		Key:      3,
 		ID:       3,
 		Name:     "van",
 		Category: "vehicle",
 		Created:  time.Now().AddDate(0, 30, 0),
 	},
-	ItemTest{ //4
+	ItemTest{
+		Key:      4,
 		ID:       8,
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
 		Tags:     []string{"cooked"},
 	},
-	ItemTest{ //5
+	ItemTest{
+		Key:      5,
 		ID:       1,
 		Name:     "crow",
 		Category: "animal",
@@ -91,7 +92,8 @@ var testData = []ItemTest{
 		Color:    "blue",
 		Fruit:    "orange",
 	},
-	ItemTest{ //6
+	ItemTest{
+		Key:      6,
 		ID:       5,
 		Name:     "van",
 		Category: "vehicle",
@@ -99,26 +101,30 @@ var testData = []ItemTest{
 		Color:    "orange",
 		Fruit:    "orange",
 	},
-	ItemTest{ //7
+	ItemTest{
+		Key:      7,
 		ID:       5,
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
 		Tags:     []string{"cooked"},
 	},
-	ItemTest{ //8
+	ItemTest{
+		Key:      8,
 		ID:       6,
 		Name:     "lion",
 		Category: "animal",
 		Created:  time.Now().AddDate(3, 0, 0),
 	},
-	ItemTest{ //9
+	ItemTest{
+		Key:      9,
 		ID:       7,
 		Name:     "bear",
 		Category: "animal",
 		Created:  time.Now().AddDate(3, 0, 0),
 	},
-	ItemTest{ //10
+	ItemTest{
+		Key:      10,
 		ID:       9,
 		Name:     "tacos",
 		Category: "food",
@@ -126,7 +132,8 @@ var testData = []ItemTest{
 		Tags:     []string{"cooked"},
 		Color:    "orange",
 	},
-	ItemTest{ //11
+	ItemTest{
+		Key:      11,
 		ID:       10,
 		Name:     "golf cart",
 		Category: "vehicle",
@@ -134,33 +141,38 @@ var testData = []ItemTest{
 		Color:    "pink",
 		Fruit:    "apple",
 	},
-	ItemTest{ //12
+	ItemTest{
+		Key:      12,
 		ID:       11,
 		Name:     "oatmeal",
 		Category: "food",
 		Created:  time.Now().AddDate(0, 0, -30),
 		Tags:     []string{"cooked"},
 	},
-	ItemTest{ //13
+	ItemTest{
+		Key:      13,
 		ID:       8,
 		Name:     "mouse",
 		Category: "animal",
 		Created:  time.Now(),
 	},
-	ItemTest{ //14
+	ItemTest{
+		Key:      14,
 		ID:       12,
 		Name:     "fish",
 		Category: "animal",
 		Created:  time.Now().AddDate(0, 0, -1),
 	},
-	ItemTest{ //15
+	ItemTest{
+		Key:      15,
 		ID:       13,
 		Name:     "fish",
 		Category: "food",
 		Created:  time.Now(),
 		Tags:     []string{"cooked"},
 	},
-	ItemTest{ //16
+	ItemTest{
+		Key:      16,
 		ID:       9,
 		Name:     "zebra",
 		Category: "animal",
@@ -177,7 +189,7 @@ type test struct {
 var tests = []test{
 	test{
 		name:   "Equal Key",
-		query:  bolthold.Where(bolthold.Key()).Eq(testData[4].key()),
+		query:  bolthold.Where(bolthold.Key).Eq(testData[4].Key),
 		result: []int{4},
 	},
 	test{
@@ -192,7 +204,7 @@ var tests = []test{
 	},
 	test{
 		name:   "Not Equal Key",
-		query:  bolthold.Where(bolthold.Key()).Ne(testData[4].key()),
+		query:  bolthold.Where(bolthold.Key).Ne(testData[4].Key),
 		result: []int{0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	},
 	test{
@@ -207,8 +219,8 @@ var tests = []test{
 	},
 	test{
 		name:   "Greater Than Key",
-		query:  bolthold.Where(bolthold.Key()).Gt(testData[10].key()),
-		result: []int{16},
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key),
+		result: []int{11, 12, 13, 14, 15, 16},
 	},
 	test{
 		name:   "Greater Than Field Without Index",
@@ -222,7 +234,7 @@ var tests = []test{
 	},
 	test{
 		name:   "Less Than Key",
-		query:  bolthold.Where(bolthold.Key()).Lt(testData[0].key()),
+		query:  bolthold.Where(bolthold.Key).Lt(testData[0].Key),
 		result: []int{},
 	},
 	test{
@@ -237,7 +249,7 @@ var tests = []test{
 	},
 	test{
 		name:   "Less Than or Equal To Key",
-		query:  bolthold.Where(bolthold.Key()).Le(testData[0].key()),
+		query:  bolthold.Where(bolthold.Key).Le(testData[0].Key),
 		result: []int{0},
 	},
 	test{
@@ -252,8 +264,8 @@ var tests = []test{
 	},
 	test{
 		name:   "Greater Than or Equal To Key",
-		query:  bolthold.Where(bolthold.Key()).Ge(testData[10].key()),
-		result: []int{16, 10},
+		query:  bolthold.Where(bolthold.Key).Ge(testData[10].Key),
+		result: []int{10, 11, 12, 13, 14, 15, 16},
 	},
 	test{
 		name:   "Greater Than or Equal To Field Without Index",
@@ -339,14 +351,39 @@ var tests = []test{
 	},
 	test{
 		name:   "Test Key in secondary",
-		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key()).Eq(testData[4].key()),
+		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key).Eq(testData[4].Key),
 		result: []int{4},
+	},
+	test{
+		name:   "Skip",
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Skip(3),
+		result: []int{14, 15, 16},
+	},
+	test{
+		name:   "Skip Past Len",
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Skip(9),
+		result: []int{},
+	},
+	test{
+		name:   "Skip with Or query",
+		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(4),
+		result: []int{11, 2, 5, 8, 9, 13, 14, 16},
+	},
+	test{
+		name:   "Skip with Or query, that crosses or boundry",
+		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(8),
+		result: []int{9, 13, 14, 16},
+	},
+	test{
+		name:   "Limit",
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
+		result: []int{11, 12, 13, 14, 15},
 	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
 	for i := range testData {
-		err := store.Insert(testData[i].key(), testData[i])
+		err := store.Insert(testData[i].Key, testData[i])
 		if err != nil {
 			t.Fatalf("Error inserting test data for find test: %s", err)
 		}
@@ -367,7 +404,8 @@ func TestFind(t *testing.T) {
 				}
 				if len(result) != len(tst.result) {
 					if testing.Verbose() {
-						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), len(tst.result), result)
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result),
+							len(tst.result), result)
 					}
 					t.Fatalf("Find result count is %d wanted %d.", len(result), len(tst.result))
 				}
@@ -383,9 +421,10 @@ func TestFind(t *testing.T) {
 
 					if !found {
 						if testing.Verbose() {
-							t.Fatalf("Could not find %v in the result set! Full results: %v", result[i], result)
+							t.Fatalf("%v should not be in the result set! Full results: %v",
+								result[i], result)
 						}
-						t.Fatalf("Could not find %v in the result set!", result[i])
+						t.Fatalf("%v should not be in the result set!", result[i])
 					}
 				}
 			})
@@ -513,4 +552,55 @@ func TestQueryStringPrint(t *testing.T) {
 
 	}
 
+}
+
+func TestSkip(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+
+		q := bolthold.Where("Category").Eq("animal").Or(bolthold.Where("Name").Eq("fish"))
+
+		err := store.Find(&result, q)
+
+		if err != nil {
+			t.Fatalf("Error retrieving data for skip test.")
+		}
+
+		var skipResult []ItemTest
+		skip := 5
+
+		err = store.Find(&skipResult, q.Skip(skip))
+		if err != nil {
+			t.Fatalf("Error retrieving data for skip test on the skip query.")
+		}
+
+		if len(skipResult) != len(result)-skip {
+			t.Fatalf("Skip query didn't return the right number of records: Wanted %d got %d",
+				(len(result) - skip), len(skipResult))
+		}
+
+		// confirm that the first records are skipped
+
+		result = result[skip:]
+
+		for i := range skipResult {
+			found := false
+			for k := range result {
+				if result[i].equal(&skipResult[k]) {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				if testing.Verbose() {
+					t.Fatalf("%v should not be in the result set! Full results: %v",
+						result[i], result)
+				}
+				t.Fatalf("%v should not be in the result set!", result[i])
+			}
+		}
+
+	})
 }
