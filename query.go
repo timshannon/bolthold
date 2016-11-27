@@ -427,10 +427,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 
 	newKeys := make(keyList, 0)
 
-	//limit := query.limit
-	//if limit != 0 {
-	//limit = query.limit - len(retrievedKeys)
-	//}
+	limit := query.limit - len(retrievedKeys)
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 
@@ -469,14 +466,15 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 			}
 			// track that this key's entry has been added to the result list
 			newKeys.add(k)
+
+			if query.limit != 0 {
+				limit--
+				if limit == 0 {
+					break
+				}
+			}
 		}
 
-		//if query.limit != 0 {
-		//if limit == 0 {
-		//break
-		//}
-		//limit--
-		//}
 	}
 
 	if iter.Error() != nil {
@@ -485,7 +483,11 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 
-	if len(query.ors) > 0 { // && limit != 0 {
+	if query.limit != 0 && limit == 0 {
+		return nil
+	}
+
+	if len(query.ors) > 0 {
 		for i := range newKeys {
 			retrievedKeys.add(newKeys[i])
 		}
@@ -514,6 +516,8 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 	iter := newIterator(tx, storer.Type(), query)
 
 	newKeys := make(keyList, 0)
+
+	limit := query.limit - len(deletedKeys)
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 
@@ -556,11 +560,22 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys ke
 			}
 
 			newKeys.add(k)
+
+			if query.limit != 0 {
+				limit--
+				if limit == 0 {
+					break
+				}
+			}
 		}
 	}
 
 	if iter.Error() != nil {
 		return iter.Error()
+	}
+
+	if query.limit != 0 && limit == 0 {
+		return nil
 	}
 
 	if len(query.ors) > 0 {
@@ -594,6 +609,8 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 	iter := newIterator(tx, storer.Type(), query)
 
 	newKeys := make(keyList, 0)
+
+	limit := query.limit - len(updatedKeys)
 
 	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
 
@@ -653,11 +670,23 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 			}
 
 			newKeys.add(k)
+
+			if query.limit != 0 {
+				limit--
+				if limit == 0 {
+					break
+				}
+			}
+
 		}
 	}
 
 	if iter.Error() != nil {
 		return iter.Error()
+	}
+
+	if query.limit != 0 && limit == 0 {
+		return nil
 	}
 
 	if len(query.ors) > 0 {

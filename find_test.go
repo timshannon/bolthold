@@ -374,12 +374,11 @@ var tests = []test{
 		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(8),
 		result: []int{9, 13, 14, 16},
 	},
-
-	//test{
-	//name:   "Limit",
-	//query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
-	//result: []int{11, 12, 13, 14, 15},
-	//},
+	test{
+		name:   "Limit",
+		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
+		result: []int{11, 12, 13, 14, 15},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
