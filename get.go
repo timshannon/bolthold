@@ -56,9 +56,5 @@ func (s *Store) Find(result interface{}, query *Query) error {
 
 // TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the bolthold
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
-	var skip int
-	if query != nil {
-		skip = query.skip
-	}
-	return runQuery(tx, result, query, nil, skip)
+	return findQuery(tx, result, query)
 }

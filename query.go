@@ -403,27 +403,16 @@ func (c *Criterion) String() string {
 	return s + " " + fmt.Sprintf("%v", c.value)
 }
 
-func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyList, skip int) error {
-	if query == nil {
-		query = &Query{}
-	}
-	resultVal := reflect.ValueOf(result)
-	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
-		panic("result argument must be a slice address")
-	}
+func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(key []byte,
+	value reflect.Value, storer Storer) error) error {
 
-	sliceVal := resultVal.Elem()
+	storer := newStorer(dataType)
 
-	elType := sliceVal.Type().Elem()
-
-	// preserve original type
-	oType := elType
-
-	for elType.Kind() == reflect.Ptr {
-		elType = elType.Elem()
+	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
+		dataType = reflect.ValueOf(dataType).Elem().Interface()
 	}
 
-	iter := newIterator(tx, newStorer(reflect.New(elType).Interface()).Type(), query)
+	iter := newIterator(tx, storer.Type(), query)
 
 	newKeys := make(keyList, 0)
 
@@ -438,7 +427,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 			}
 		}
 
-		val := reflect.New(elType)
+		val := reflect.New(reflect.TypeOf(dataType))
 
 		err := decode(v, val.Interface())
 		if err != nil {
@@ -458,12 +447,11 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 				continue
 			}
 
-			// add to result
-			if oType.Kind() == reflect.Ptr {
-				sliceVal = reflect.Append(sliceVal, val)
-			} else {
-				sliceVal = reflect.Append(sliceVal, val.Elem())
+			err = action(k, val, storer)
+			if err != nil {
+				return err
 			}
+
 			// track that this key's entry has been added to the result list
 			newKeys.add(k)
 
@@ -481,8 +469,6 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 		return iter.Error()
 	}
 
-	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
-
 	if query.limit != 0 && limit == 0 {
 		return nil
 	}
@@ -493,7 +479,7 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 		}
 
 		for i := range query.ors {
-			err := runQuery(tx, result, query.ors[i], retrievedKeys, skip)
+			err := runQuery(tx, dataType, query.ors[i], retrievedKeys, skip, action)
 			if err != nil {
 				return err
 			}
@@ -503,205 +489,96 @@ func runQuery(tx *bolt.Tx, result interface{}, query *Query, retrievedKeys keyLi
 	return nil
 }
 
-func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query, deletedKeys keyList, skip int) error {
+func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
-	storer := newStorer(dataType)
 
-	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
-		dataType = reflect.ValueOf(dataType).Elem().Interface()
+	resultVal := reflect.ValueOf(result)
+	if resultVal.Kind() != reflect.Ptr || resultVal.Elem().Kind() != reflect.Slice {
+		panic("result argument must be a slice address")
 	}
 
-	iter := newIterator(tx, storer.Type(), query)
+	sliceVal := resultVal.Elem()
 
-	newKeys := make(keyList, 0)
+	elType := sliceVal.Type().Elem()
 
-	limit := query.limit - len(deletedKeys)
-
-	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
-
-		if len(deletedKeys) != 0 {
-			// don't check this record if it's already been deleted
-			if deletedKeys.in(k) {
-				continue
-			}
+	err := runQuery(tx, reflect.New(elType), query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
+		if elType.Kind() == reflect.Ptr {
+			sliceVal = reflect.Append(sliceVal, value)
+		} else {
+			sliceVal = reflect.Append(sliceVal, value.Elem())
 		}
 
-		val := reflect.New(reflect.TypeOf(dataType))
-
-		err := decode(v, val.Interface())
-		if err != nil {
-			return err
-		}
-
-		query.currentRow = val.Interface()
-
-		ok, err := query.matchesAllFields(k, val)
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			if skip > 0 {
-				skip--
-				continue
-			}
-			b := tx.Bucket([]byte(storer.Type()))
-			err = b.Delete(k)
-			if err != nil {
-				return err
-			}
-
-			// remove any indexes
-			err = indexDelete(storer, tx, k, val.Interface())
-			if err != nil {
-				return err
-			}
-
-			newKeys.add(k)
-
-			if query.limit != 0 {
-				limit--
-				if limit == 0 {
-					break
-				}
-			}
-		}
-	}
-
-	if iter.Error() != nil {
-		return iter.Error()
-	}
-
-	if query.limit != 0 && limit == 0 {
 		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
-	if len(query.ors) > 0 {
-		for i := range newKeys {
-			deletedKeys.add(newKeys[i])
-		}
-
-		for i := range query.ors {
-			err := deleteQuery(tx, dataType, query.ors[i], deletedKeys, skip)
-			if err != nil {
-				return err
-			}
-		}
-	}
+	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 
 	return nil
-
 }
 
-func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error,
-	updatedKeys keyList, skip int) error {
+func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
-	storer := newStorer(dataType)
 
-	for reflect.TypeOf(dataType).Kind() == reflect.Ptr {
-		dataType = reflect.ValueOf(dataType).Elem().Interface()
-	}
-
-	iter := newIterator(tx, storer.Type(), query)
-
-	newKeys := make(keyList, 0)
-
-	limit := query.limit - len(updatedKeys)
-
-	for k, v := iter.Next(); k != nil; k, v = iter.Next() {
-
-		if len(updatedKeys) != 0 {
-			// don't check this record if it's already been updated
-			if updatedKeys.in(k) {
-				continue
-			}
-		}
-
-		val := reflect.New(reflect.TypeOf(dataType))
-
-		err := decode(v, val.Interface())
+	return runQuery(tx, dataType, query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
+		b := tx.Bucket([]byte(storer.Type()))
+		err := b.Delete(key)
 		if err != nil {
 			return err
 		}
 
-		query.currentRow = val.Interface()
-
-		ok, err := query.matchesAllFields(k, val)
+		// remove any indexes
+		err = indexDelete(storer, tx, key, value.Interface())
 		if err != nil {
 			return err
 		}
 
-		if ok {
-			if skip > 0 {
-				skip--
-				continue
-			}
-
-			upVal := val.Interface()
-			err = update(upVal)
-			if err != nil {
-				return err
-			}
-
-			encVal, err := encode(upVal)
-			if err != nil {
-				return err
-			}
-
-			b := tx.Bucket([]byte(storer.Type()))
-			err = b.Put(k, encVal)
-			if err != nil {
-				return err
-			}
-
-			// delete any existing indexes
-			err = indexDelete(storer, tx, k, upVal)
-			if err != nil {
-				return err
-			}
-			// insert any new indexes
-			err = indexAdd(storer, tx, k, upVal)
-			if err != nil {
-				return err
-			}
-
-			newKeys.add(k)
-
-			if query.limit != 0 {
-				limit--
-				if limit == 0 {
-					break
-				}
-			}
-
-		}
-	}
-
-	if iter.Error() != nil {
-		return iter.Error()
-	}
-
-	if query.limit != 0 && limit == 0 {
 		return nil
+	})
+}
+
+func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
+	if query == nil {
+		query = &Query{}
 	}
 
-	if len(query.ors) > 0 {
-		for i := range newKeys {
-			updatedKeys.add(newKeys[i])
+	return runQuery(tx, dataType, query, nil, query.skip, func(key []byte, value reflect.Value, storer Storer) error {
+
+		upVal := value.Interface()
+		err := update(upVal)
+		if err != nil {
+			return err
 		}
 
-		for i := range query.ors {
-			err := updateQuery(tx, dataType, query.ors[i], update, updatedKeys, skip)
-			if err != nil {
-				return err
-			}
+		encVal, err := encode(upVal)
+		if err != nil {
+			return err
 		}
-	}
 
-	return nil
+		b := tx.Bucket([]byte(storer.Type()))
+		err = b.Put(key, encVal)
+		if err != nil {
+			return err
+		}
+
+		// delete any existing indexes
+		err = indexDelete(storer, tx, key, upVal)
+		if err != nil {
+			return err
+		}
+		// insert any new indexes
+		err = indexAdd(storer, tx, key, upVal)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
 }
