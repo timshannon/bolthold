@@ -5,7 +5,6 @@
 package bolthold_test
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -288,16 +287,55 @@ var tests = []test{
 		result: []int{2, 9, 12},
 	},
 	test{
-		name: "Function",
-		query: bolthold.Where("Name").MatchFunc(func(field interface{}) (bool, error) {
+		name: "Function Field",
+		query: bolthold.Where("Name").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, errors.New("Field not a string!")
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
 			}
 
 			return strings.HasPrefix(field.(string), "oat"), nil
 		}),
 		result: []int{12},
+	},
+	test{
+		name: "Function Record",
+		query: bolthold.Where("ID").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			record := ra.Record()
+			_, ok := record.(*ItemTest)
+			if !ok {
+				return false, fmt.Errorf("Record not an ItemTest, it's a %T!", record)
+			}
+
+			return strings.HasPrefix(record.(*ItemTest).Name, "oat"), nil
+		}),
+		result: []int{12},
+	},
+	test{
+		name: "Function Subquery",
+		query: bolthold.Where("Name").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			// find where name exists in more than one category
+			record, ok := ra.Record().(*ItemTest)
+			if !ok {
+				return false, fmt.Errorf("Record is not ItemTest, it's a %T", ra.Record())
+			}
+
+			var result []ItemTest
+
+			err := ra.SubQuery(&result,
+				bolthold.Where("Name").Eq(record.Name).And("Category").Ne(record.Category))
+			if err != nil {
+				return false, err
+			}
+
+			if len(result) > 0 {
+				return true, nil
+			}
+
+			return false, nil
+		}),
+		result: []int{14, 15},
 	},
 	test{
 		name:   "Time Comparison",
@@ -330,8 +368,9 @@ var tests = []test{
 		result: []int{2, 5, 8, 9, 13, 14, 16, 15},
 	},
 	test{
-		name:   "Multiple Chained And + Or Query ",
-		query:  bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
+		name: "Multiple Chained And + Or Query ",
+		query: bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).
+			Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
 		result: []int{8, 9, 15},
 	},
 	test{
@@ -370,7 +409,7 @@ var tests = []test{
 		result: []int{11, 2, 5, 8, 9, 13, 14, 16},
 	},
 	test{
-		name:   "Skip with Or query, that crosses or boundry",
+		name:   "Skip with Or query, that crosses or boundary",
 		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(8),
 		result: []int{9, 13, 14, 16},
 	},
@@ -514,7 +553,7 @@ func TestQueryStringPrint(t *testing.T) {
 		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").
 		Ne("Sixth Value").Or(bolthold.Where("FirstField").In("val1", "val2", "val3").And("SecondField").IsNil().
 		And("ThirdField").RegExp(regexp.MustCompile("test")).And("FirstField").
-		MatchFunc(func(field interface{}) (bool, error) {
+		MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			return true, nil
 		}))
 
@@ -602,5 +641,109 @@ func TestSkip(t *testing.T) {
 			}
 		}
 
+	})
+}
+
+func TestSkipNegative(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with negative skip did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Skip(-30))
+	})
+}
+
+func TestLimitNegative(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with negative limit did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Limit(-30))
+	})
+}
+
+func TestSkipDouble(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with double skips did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Skip(30).Skip(3))
+	})
+}
+
+func TestLimitDouble(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with double limits did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Limit(30).Limit(3))
+	})
+}
+
+func TestSkipInOr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with skip in or query did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Or(bolthold.Where("Name").Eq("blah").Skip(3)))
+	})
+}
+
+func TestLimitInOr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with limit in or query did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Or(bolthold.Where("Name").Eq("blah").Limit(3)))
+	})
+}
+
+func TestSlicePointerResult(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		count := 10
+		for i := 0; i < count; i++ {
+			err := store.Insert(i, &ItemTest{
+				Key: i,
+				ID:  i,
+			})
+			if err != nil {
+				t.Fatalf("Error inserting data for Slice Pointer test: %s", err)
+			}
+		}
+
+		var result []*ItemTest
+		err := store.Find(&result, nil)
+
+		if err != nil {
+			t.Fatalf("Error retrieving data for Slice pointer test: %s", err)
+		}
+
+		if len(result) != count {
+			t.Fatalf("Expected %d, got %d", count, len(result))
+		}
 	})
 }
