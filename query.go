@@ -37,8 +37,10 @@ type Query struct {
 	currentField  string
 	fieldCriteria map[string][]*Criterion
 	ors           []*Query
-	badIndex      bool
-	currentRow    interface{}
+
+	badIndex   bool
+	currentRow interface{}
+	tx         *bolt.Tx
 
 	limit int
 	skip  int
@@ -254,7 +256,31 @@ func (c *Criterion) IsNil() *Query {
 }
 
 // MatchFunc is a function used to test an arbitrary matching value in a query
-type MatchFunc func(field interface{}) (bool, error)
+type MatchFunc func(ra *RecordAccess) (bool, error)
+
+// RecordAccess allows access to the current record, field or allows running a subquery within a
+// MatchFunc
+type RecordAccess struct {
+	tx     *bolt.Tx
+	record interface{}
+	field  interface{}
+}
+
+// Field is the current field being queried
+func (r *RecordAccess) Field() interface{} {
+	return r.field
+}
+
+// Record is the complete record for a given row in bolthold
+func (r *RecordAccess) Record() interface{} {
+	return r.record
+}
+
+// SubQuery allows you to run another query in the same transaction for each
+// record in a parent query
+func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
+	return findQuery(r.tx, result, query)
+}
 
 // MatchFunc will test if a field matches the passed in function
 func (c *Criterion) MatchFunc(match MatchFunc) *Query {
@@ -294,7 +320,11 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	case re:
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
 	case fn:
-		return c.value.(MatchFunc)(value)
+		return c.value.(MatchFunc)(&RecordAccess{
+			field:  value,
+			record: c.query.currentRow,
+			tx:     c.query.tx,
+		})
 	case isnil:
 		return reflect.ValueOf(value).IsNil(), nil
 	default:
@@ -403,8 +433,12 @@ func (c *Criterion) String() string {
 	return s + " " + fmt.Sprintf("%v", c.value)
 }
 
-func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(key []byte,
-	value reflect.Value, storer Storer) error) error {
+type record struct {
+	key   []byte
+	value reflect.Value
+}
+
+func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
 
 	storer := newStorer(dataType)
 
@@ -436,6 +470,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 		}
 
 		query.currentRow = val.Interface()
+		query.tx = tx
 
 		ok, err := query.matchesAllFields(k, val)
 		if err != nil {
@@ -448,7 +483,10 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 				continue
 			}
 
-			err = action(k, val, storer)
+			err = action(&record{
+				key:   k,
+				value: val,
+			})
 			if err != nil {
 				return err
 			}
@@ -507,11 +545,11 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 	val := reflect.New(elType)
 
 	err := runQuery(tx, val.Interface(), query, nil, query.skip,
-		func(key []byte, value reflect.Value, storer Storer) error {
+		func(r *record) error {
 			if elType.Kind() == reflect.Ptr {
-				sliceVal = reflect.Append(sliceVal, value)
+				sliceVal = reflect.Append(sliceVal, r.value)
 			} else {
-				sliceVal = reflect.Append(sliceVal, value.Elem())
+				sliceVal = reflect.Append(sliceVal, r.value.Elem())
 			}
 
 			return nil
@@ -531,22 +569,36 @@ func deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) error {
 		query = &Query{}
 	}
 
-	return runQuery(tx, dataType, query, nil, query.skip,
-		func(key []byte, value reflect.Value, storer Storer) error {
-			b := tx.Bucket([]byte(storer.Type()))
-			err := b.Delete(key)
-			if err != nil {
-				return err
-			}
+	var records []*record
 
-			// remove any indexes
-			err = indexDelete(storer, tx, key, value.Interface())
-			if err != nil {
-				return err
-			}
+	err := runQuery(tx, dataType, query, nil, query.skip,
+		func(r *record) error {
+			records = append(records, r)
 
 			return nil
 		})
+
+	if err != nil {
+		return err
+	}
+
+	storer := newStorer(dataType)
+
+	b := tx.Bucket([]byte(storer.Type()))
+	for i := range records {
+		err := b.Delete(records[i].key)
+		if err != nil {
+			return err
+		}
+
+		// remove any indexes
+		err = indexDelete(storer, tx, records[i].key, records[i].value.Interface())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
@@ -554,37 +606,51 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 		query = &Query{}
 	}
 
-	return runQuery(tx, dataType, query, nil, query.skip,
-		func(key []byte, value reflect.Value, storer Storer) error {
+	var records []*record
 
-			upVal := value.Interface()
-			err := update(upVal)
-			if err != nil {
-				return err
-			}
+	err := runQuery(tx, dataType, query, nil, query.skip,
+		func(r *record) error {
+			records = append(records, r)
 
-			encVal, err := encode(upVal)
-			if err != nil {
-				return err
-			}
-
-			b := tx.Bucket([]byte(storer.Type()))
-			err = b.Put(key, encVal)
-			if err != nil {
-				return err
-			}
-
-			// delete any existing indexes
-			err = indexDelete(storer, tx, key, upVal)
-			if err != nil {
-				return err
-			}
-			// insert any new indexes
-			err = indexAdd(storer, tx, key, upVal)
-			if err != nil {
-				return err
-			}
 			return nil
+
 		})
 
+	if err != nil {
+		return err
+	}
+
+	storer := newStorer(dataType)
+	b := tx.Bucket([]byte(storer.Type()))
+
+	for i := range records {
+		upVal := records[i].value.Interface()
+		err := update(upVal)
+		if err != nil {
+			return err
+		}
+
+		encVal, err := encode(upVal)
+		if err != nil {
+			return err
+		}
+
+		err = b.Put(records[i].key, encVal)
+		if err != nil {
+			return err
+		}
+
+		// delete any existing indexes
+		err = indexDelete(storer, tx, records[i].key, upVal)
+		if err != nil {
+			return err
+		}
+		// insert any new indexes
+		err = indexAdd(storer, tx, records[i].key, upVal)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

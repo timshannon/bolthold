@@ -5,7 +5,6 @@
 package bolthold_test
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -288,16 +287,55 @@ var tests = []test{
 		result: []int{2, 9, 12},
 	},
 	test{
-		name: "Function",
-		query: bolthold.Where("Name").MatchFunc(func(field interface{}) (bool, error) {
+		name: "Function Field",
+		query: bolthold.Where("Name").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, errors.New("Field not a string!")
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
 			}
 
 			return strings.HasPrefix(field.(string), "oat"), nil
 		}),
 		result: []int{12},
+	},
+	test{
+		name: "Function Record",
+		query: bolthold.Where("ID").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			record := ra.Record()
+			_, ok := record.(*ItemTest)
+			if !ok {
+				return false, fmt.Errorf("Record not an ItemTest, it's a %T!", record)
+			}
+
+			return strings.HasPrefix(record.(*ItemTest).Name, "oat"), nil
+		}),
+		result: []int{12},
+	},
+	test{
+		name: "Function Subquery",
+		query: bolthold.Where("Name").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			// find where name exists in more than one category
+			record, ok := ra.Record().(*ItemTest)
+			if !ok {
+				return false, fmt.Errorf("Record is not ItemTest, it's a %T", ra.Record())
+			}
+
+			var result []ItemTest
+
+			err := ra.SubQuery(&result,
+				bolthold.Where("Name").Eq(record.Name).And("Category").Ne(record.Category))
+			if err != nil {
+				return false, err
+			}
+
+			if len(result) > 0 {
+				return true, nil
+			}
+
+			return false, nil
+		}),
+		result: []int{14, 15},
 	},
 	test{
 		name:   "Time Comparison",
@@ -330,8 +368,9 @@ var tests = []test{
 		result: []int{2, 5, 8, 9, 13, 14, 16, 15},
 	},
 	test{
-		name:   "Multiple Chained And + Or Query ",
-		query:  bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
+		name: "Multiple Chained And + Or Query ",
+		query: bolthold.Where("Category").Eq("animal").And("Created").Gt(time.Now()).
+			Or(bolthold.Where("Name").Eq("fish").And("ID").Ge(13)),
 		result: []int{8, 9, 15},
 	},
 	test{
@@ -514,7 +553,7 @@ func TestQueryStringPrint(t *testing.T) {
 		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").
 		Ne("Sixth Value").Or(bolthold.Where("FirstField").In("val1", "val2", "val3").And("SecondField").IsNil().
 		And("ThirdField").RegExp(regexp.MustCompile("test")).And("FirstField").
-		MatchFunc(func(field interface{}) (bool, error) {
+		MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			return true, nil
 		}))
 
