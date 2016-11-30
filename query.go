@@ -439,7 +439,6 @@ type record struct {
 }
 
 func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
-
 	storer := newStorer(dataType)
 
 	tp := dataType
@@ -542,7 +541,13 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 
 	elType := sliceVal.Type().Elem()
 
-	val := reflect.New(elType)
+	tp := elType
+
+	for tp.Kind() == reflect.Ptr {
+		tp = tp.Elem()
+	}
+
+	val := reflect.New(tp)
 
 	err := runQuery(tx, val.Interface(), query, nil, query.skip,
 		func(r *record) error {

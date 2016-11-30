@@ -721,3 +721,29 @@ func TestLimitInOr(t *testing.T) {
 		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Or(bolthold.Where("Name").Eq("blah").Limit(3)))
 	})
 }
+
+func TestSlicePointerResult(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		count := 10
+		for i := 0; i < count; i++ {
+			err := store.Insert(i, &ItemTest{
+				Key: i,
+				ID:  i,
+			})
+			if err != nil {
+				t.Fatalf("Error inserting data for Slice Pointer test: %s", err)
+			}
+		}
+
+		var result []*ItemTest
+		err := store.Find(&result, nil)
+
+		if err != nil {
+			t.Fatalf("Error retrieving data for Slice pointer test: %s", err)
+		}
+
+		if len(result) != count {
+			t.Fatalf("Expected %d, got %d", count, len(result))
+		}
+	})
+}
