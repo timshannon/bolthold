@@ -145,7 +145,7 @@ func (q *Query) Limit(amount int) *Query {
 // Or will panic if the query passed in contains a limit or skip value, as they are only
 // allowed on top level queries
 func (q *Query) Or(query *Query) *Query {
-	if q.skip != 0 || q.limit != 0 {
+	if query.skip != 0 || query.limit != 0 {
 		panic("Or'd queries cannot contain skip or limit values")
 	}
 	q.ors = append(q.ors, query)

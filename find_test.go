@@ -643,3 +643,81 @@ func TestSkip(t *testing.T) {
 
 	})
 }
+
+func TestSkipNegative(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with negative skip did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Skip(-30))
+	})
+}
+
+func TestLimitNegative(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with negative limit did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Limit(-30))
+	})
+}
+
+func TestSkipDouble(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with double skips did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Skip(30).Skip(3))
+	})
+}
+
+func TestLimitDouble(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with double limits did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Limit(30).Limit(3))
+	})
+}
+
+func TestSkipInOr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with skip in or query did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Or(bolthold.Where("Name").Eq("blah").Skip(3)))
+	})
+}
+
+func TestLimitInOr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with limit in or query did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").Or(bolthold.Where("Name").Eq("blah").Limit(3)))
+	})
+}
