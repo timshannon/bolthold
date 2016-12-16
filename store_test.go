@@ -201,6 +201,30 @@ func TestAlternateEncoding(t *testing.T) {
 
 }
 
+func TestGetUnknownType(t *testing.T) {
+	filename := tempfile()
+	store, err := bolthold.Open(filename, 0666, &bolthold.Options{
+		Encoder: json.Marshal,
+		Decoder: json.Unmarshal,
+	})
+	defer store.Close()
+	defer os.Remove(filename)
+
+	if err != nil {
+		t.Fatalf("Error opening %s: %s", filename, err)
+	}
+
+	type test struct {
+		Test string
+	}
+
+	var result test
+	err = store.Get("unknownKey", &result)
+	if err != bolthold.ErrNotFound {
+		t.Errorf("Expected error of type ErrNotFound, not %T", err)
+	}
+}
+
 // utilities
 
 // testWrap creates a temporary database for testing and closes and cleans it up when
