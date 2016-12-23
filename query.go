@@ -40,6 +40,7 @@ type Query struct {
 
 	badIndex   bool
 	currentRow interface{}
+	dataType   reflect.Type
 	tx         *bolt.Tx
 
 	limit int
@@ -284,6 +285,9 @@ func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
 
 // MatchFunc will test if a field matches the passed in function
 func (c *Criterion) MatchFunc(match MatchFunc) *Query {
+	if c.query.currentField == Key {
+		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against.")
+	}
 	return c.op(fn, match)
 }
 
@@ -292,11 +296,34 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	var value interface{}
 	if encoded {
 		if len(testValue.([]byte)) != 0 {
-			// used with keys
-			value = reflect.New(reflect.TypeOf(c.value)).Interface()
-			err := decode(testValue.([]byte), value)
-			if err != nil {
-				return false, err
+			if c.operator == fn {
+				// with matchFunc, their is no value type to assume a type from, so we need to get it
+				// from the current field being tested
+				// This is not possible with Keys, so defining a matchFunc query on a Key panics
+
+				fieldType, ok := c.query.dataType.FieldByName(c.query.index)
+				if !ok {
+					return false, fmt.Errorf("Current row does not contain the field %s which has been indexed.",
+						c.query.index)
+				}
+				value = reflect.New(fieldType.Type).Interface()
+				err := decode(testValue.([]byte), value)
+				if err != nil {
+					return false, err
+				}
+
+				// in order to decode, we needed a pointer, but matchFunc is expecting the original
+				// type, so we need to get an interface of the actual element, not the pointer
+				value = reflect.ValueOf(value).Elem().Interface()
+
+			} else {
+				// used with keys
+				value = reflect.New(reflect.TypeOf(c.value)).Interface()
+				err := decode(testValue.([]byte), value)
+				if err != nil {
+					return false, err
+				}
+
 			}
 		}
 
@@ -446,6 +473,8 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	for reflect.TypeOf(tp).Kind() == reflect.Ptr {
 		tp = reflect.ValueOf(tp).Elem().Interface()
 	}
+
+	query.dataType = reflect.TypeOf(tp)
 
 	iter := newIterator(tx, storer.Type(), query)
 

@@ -418,6 +418,19 @@ var tests = []test{
 		query:  bolthold.Where(bolthold.Key).Gt(testData[10].Key).Limit(5),
 		result: []int{11, 12, 13, 14, 15},
 	},
+	test{
+		name: "Issue #8 - Function Field on index",
+		query: bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
+			_, ok := field.(string)
+			if !ok {
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+			}
+
+			return !strings.HasPrefix(field.(string), "veh"), nil
+		}),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -745,5 +758,26 @@ func TestSlicePointerResult(t *testing.T) {
 		if len(result) != count {
 			t.Fatalf("Expected %d, got %d", count, len(result))
 		}
+	})
+}
+
+func TestKeyMatchFunc(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running matchFunc against Key query did not panic!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where(bolthold.Key).MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
+			_, ok := field.(string)
+			if !ok {
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+			}
+
+			return strings.HasPrefix(field.(string), "oat"), nil
+		}))
 	})
 }
