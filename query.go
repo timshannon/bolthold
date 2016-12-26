@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"unicode"
 
 	"github.com/boltdb/bolt"
@@ -687,4 +688,68 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 	}
 
 	return nil
+}
+
+func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
+	if query == nil {
+		query = &Query{}
+	}
+
+	var result []*AggregateResult
+
+	if groupBy == "" {
+		result = append(result, &AggregateResult{})
+	}
+
+	err := runQuery(tx, dataType, query, nil, query.skip,
+		func(r *record) error {
+			if groupBy == "" {
+				result[0].reduction = append(result[0].reduction, r.value)
+				return nil
+			}
+
+			fVal := r.value.FieldByName(groupBy)
+			if !fVal.IsValid() {
+				return fmt.Errorf("The field %s does not exist in the type %s", groupBy, r.value.Type())
+			}
+
+			var err error
+			var c int
+
+			i := sort.Search(len(result), func(i int) bool {
+				c, err = compare(result[i].group.Interface(), fVal.Interface())
+				return c >= 0
+			})
+
+			if err != nil {
+				return err
+			}
+
+			if i < len(result) {
+				c, err := compare(result[i].group.Interface(), fVal.Interface())
+				if err != nil {
+					return err
+				}
+
+				if c == 0 {
+					// group already exists, append results to reduction
+					result[i].reduction = append(result[i].reduction, r.value)
+				}
+			} else {
+				// group  not found, create another grouping at i
+				result = append(result, nil)
+				copy(result[i+1:], result[i:])
+				result[i] = &AggregateResult{
+					group: fVal,
+				}
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

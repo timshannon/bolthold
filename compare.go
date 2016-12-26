@@ -60,6 +60,10 @@ func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
 		other = reflect.ValueOf(other).Elem().Interface()
 	}
 
+	return compare(value, other)
+}
+
+func compare(value, other interface{}) (int, error) {
 	switch t := value.(type) {
 	case time.Time:
 		tother, ok := other.(time.Time)
@@ -303,4 +307,5 @@ func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
 
 		return 1, nil
 	}
+
 }
