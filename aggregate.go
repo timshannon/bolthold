@@ -1,3 +1,7 @@
+// Copyright 2016 Tim Shannon. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+
 package bolthold
 
 import (
@@ -33,8 +37,14 @@ func (a *AggregateResult) Reduction(result interface{}) {
 
 	sliceVal := resultVal.Elem()
 
+	elType := sliceVal.Type().Elem()
+
 	for i := range a.reduction {
-		sliceVal = reflect.Append(sliceVal, a.reduction[i])
+		if elType.Kind() == reflect.Ptr {
+			sliceVal = reflect.Append(sliceVal, a.reduction[i])
+		} else {
+			sliceVal = reflect.Append(sliceVal, a.reduction[i].Elem())
+		}
 	}
 
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))

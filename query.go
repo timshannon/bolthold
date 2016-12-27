@@ -708,7 +708,7 @@ func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy str
 				return nil
 			}
 
-			fVal := r.value.FieldByName(groupBy)
+			fVal := r.value.Elem().FieldByName(groupBy)
 			if !fVal.IsValid() {
 				return fmt.Errorf("The field %s does not exist in the type %s", groupBy, r.value.Type())
 			}
@@ -734,14 +734,14 @@ func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy str
 				if c == 0 {
 					// group already exists, append results to reduction
 					result[i].reduction = append(result[i].reduction, r.value)
+					return nil
 				}
-			} else {
-				// group  not found, create another grouping at i
-				result = append(result, nil)
-				copy(result[i+1:], result[i:])
-				result[i] = &AggregateResult{
-					group: fVal,
-				}
+			}
+			// group  not found, create another grouping at i
+			result = append(result, nil)
+			copy(result[i+1:], result[i:])
+			result[i] = &AggregateResult{
+				group: fVal,
 			}
 
 			return nil
