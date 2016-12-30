@@ -5,6 +5,7 @@
 package bolthold_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/timshannon/bolthold"
@@ -36,13 +37,43 @@ func TestFindAggregateGroup(t *testing.T) {
 					t.Fatalf("Reduction item is not in the proper grouping.  Wanted %s, Got %s",
 						group, items[j].Category)
 				}
+				fmt.Println(items[i])
 			}
 		}
 
+		//test min
+		for i := range result {
+			min := &ItemTest{}
+			max := &ItemTest{}
+			var group string
+
+			result[i].Group(&group)
+
+			result[i].Min("ID", min)
+			result[i].Max("ID", max)
+
+			fmt.Printf("Max %s: %d\n", group, max.Key)
+			fmt.Printf("Min %s: %d\n", group, min.Key)
+
+			switch group {
+			case "animal":
+				if !min.equal(&testData[5]) {
+					t.Fatalf("Expected min value of %v Got %v", testData[5], min)
+				}
+			case "food":
+				if !min.equal(&testData[7]) {
+					t.Fatalf("Expected min value of %v Got %v", testData[7], min)
+				}
+
+			case "vehicle":
+				if !min.equal(&testData[1]) {
+					t.Fatalf("Expected min value of %v Got %v", testData[1], min)
+				}
+			}
+		}
+		// test max
+		// test avg
+		// test count
+
 	})
 }
-
-//test min
-// test max
-// test avg
-// test count

@@ -15,7 +15,7 @@ import (
 
 // AggregateResult allows you to access the results of an aggregate query
 type AggregateResult struct {
-	reduction []reflect.Value
+	reduction []reflect.Value // always pointers
 	group     reflect.Value
 	sortby    string
 }
@@ -61,12 +61,13 @@ func (a *aggregateResultSort) Swap(i, j int) {
 	a.reduction[i], a.reduction[j] = a.reduction[j], a.reduction[i]
 }
 func (a *aggregateResultSort) Less(i, j int) bool {
-	iVal := a.reduction[i].FieldByName(a.sortby)
+	//reduction values are always pointers
+	iVal := a.reduction[i].Elem().FieldByName(a.sortby)
 	if !iVal.IsValid() {
 		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[i].Type()))
 	}
 
-	jVal := a.reduction[j].FieldByName(a.sortby)
+	jVal := a.reduction[j].Elem().FieldByName(a.sortby)
 	if !jVal.IsValid() {
 		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[j].Type()))
 	}
@@ -80,16 +81,20 @@ func (a *aggregateResultSort) Less(i, j int) bool {
 }
 
 func (a *AggregateResult) sort(field string) {
+	if !startsUpper(field) {
+		panic("The first letter of a field must be upper-case")
+	}
 	if a.sortby == field {
 		// already sorted
 		return
 	}
 
-	sort.Sort((*aggregateResultSort)(a))
 	a.sortby = field
+	sort.Sort((*aggregateResultSort)(a))
 }
 
-// Max Returns the maxiumum value of the Aggregate Grouping
+// Max Returns the maxiumum value of the Aggregate Grouping, uses the Comparer interface if field
+// can be automatically compared
 func (a *AggregateResult) Max(field string, result interface{}) {
 	a.sort(field)
 
@@ -98,10 +103,15 @@ func (a *AggregateResult) Max(field string, result interface{}) {
 		panic("result argument must be an address")
 	}
 
-	resultVal.Elem().Set(a.reduction[:len(a.reduction)-1][0])
+	if resultVal.IsNil() {
+		panic("result argument must not be nil")
+	}
+
+	resultVal.Elem().Set(a.reduction[:len(a.reduction)-1][0].Elem())
 }
 
-// Min returns the minimum value of the Aggregate Grouping
+// Min returns the minimum value of the Aggregate Grouping, uses the Comparer interface if field
+// can be automatically compared
 func (a *AggregateResult) Min(field string, result interface{}) {
 	a.sort(field)
 
@@ -110,7 +120,11 @@ func (a *AggregateResult) Min(field string, result interface{}) {
 		panic("result argument must be an address")
 	}
 
-	resultVal.Elem().Set(a.reduction[0])
+	if resultVal.IsNil() {
+		panic("result argument must not be nil")
+	}
+
+	resultVal.Elem().Set(a.reduction[0].Elem())
 }
 
 // Avg returns the average value of the aggregate grouping
