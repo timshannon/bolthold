@@ -6,7 +6,9 @@ package bolthold
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/boltdb/bolt"
 )
@@ -15,6 +17,7 @@ import (
 type AggregateResult struct {
 	reduction []reflect.Value
 	group     reflect.Value
+	sortby    string
 }
 
 // Group returns the field grouped by in the query
@@ -50,8 +53,40 @@ func (a *AggregateResult) Reduction(result interface{}) {
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 }
 
+//TODO: replace with 1.8 sort.Slice
+type aggregateResultSort AggregateResult
+
+func (a *aggregateResultSort) Len() int { return len(a.reduction) }
+func (a *aggregateResultSort) Swap(i, j int) {
+	a.reduction[i], a.reduction[j] = a.reduction[j], a.reduction[i]
+}
+func (a *aggregateResultSort) Less(i, j int) bool {
+	iVal := a.reduction[i].FieldByName(a.sortby)
+	if !iVal.IsValid() {
+		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[i].Type()))
+	}
+
+	jVal := a.reduction[j].FieldByName(a.sortby)
+	if !jVal.IsValid() {
+		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[j].Type()))
+	}
+
+	c, err := compare(iVal.Interface(), jVal.Interface())
+	if err != nil {
+		panic(err)
+	}
+
+	return c == -1
+}
+
 func (a *AggregateResult) sort(field string) {
-	//TODO: Sort
+	if a.sortby == field {
+		// already sorted
+		return
+	}
+
+	sort.Sort((*aggregateResultSort)(a))
+	a.sortby = field
 }
 
 // Max Returns the maxiumum value of the Aggregate Grouping
