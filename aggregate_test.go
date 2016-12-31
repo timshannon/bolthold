@@ -37,7 +37,6 @@ func TestFindAggregateGroup(t *testing.T) {
 					t.Fatalf("Reduction item is not in the proper grouping.  Wanted %s, Got %s",
 						group, items[j].Category)
 				}
-				fmt.Println(items[i])
 			}
 		}
 
