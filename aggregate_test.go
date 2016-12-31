@@ -5,7 +5,6 @@
 package bolthold_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/timshannon/bolthold"
@@ -40,7 +39,7 @@ func TestFindAggregateGroup(t *testing.T) {
 			}
 		}
 
-		//test min
+		//test min / max / count
 		for i := range result {
 			min := &ItemTest{}
 			max := &ItemTest{}
@@ -51,26 +50,45 @@ func TestFindAggregateGroup(t *testing.T) {
 			result[i].Min("ID", min)
 			result[i].Max("ID", max)
 
-			fmt.Printf("Max %s: %d\n", group, max.Key)
-			fmt.Printf("Min %s: %d\n", group, min.Key)
-
 			switch group {
 			case "animal":
+				result[i].Print("animal")
 				if !min.equal(&testData[5]) {
-					t.Fatalf("Expected min value of %v Got %v", testData[5], min)
+					t.Fatalf("Expected animal min value of %v Got %v", testData[5], min)
 				}
+				if !max.equal(&testData[14]) {
+					t.Fatalf("Expected animal max value of %v Got %v", testData[5], max)
+				}
+
+				if result[i].Count() != 7 {
+					t.Fatalf("Expected animal count of %d got %d", 7, result[i].Count())
+				}
+
 			case "food":
 				if !min.equal(&testData[7]) {
-					t.Fatalf("Expected min value of %v Got %v", testData[7], min)
+					t.Fatalf("Expected food min value of %v Got %v", testData[7], min)
+				}
+				if !max.equal(&testData[15]) {
+					t.Fatalf("Expected food max value of %v Got %v", testData[7], max)
+				}
+
+				if result[i].Count() != 5 {
+					t.Fatalf("Expected food count of %d got %d", 5, result[i].Count())
 				}
 
 			case "vehicle":
 				if !min.equal(&testData[1]) {
-					t.Fatalf("Expected min value of %v Got %v", testData[1], min)
+					t.Fatalf("Expected vehicle min value of %v Got %v", testData[1], min)
+				}
+				if !max.equal(&testData[11]) {
+					t.Fatalf("Expected vehicle max value of %v Got %v", testData[1], max)
+				}
+
+				if result[i].Count() != 5 {
+					t.Fatalf("Expected vehicle count of %d got %d", 5, result[i].Count())
 				}
 			}
 		}
-		// test max
 		// test avg
 		// test count
 

@@ -107,7 +107,7 @@ func (a *AggregateResult) Max(field string, result interface{}) {
 		panic("result argument must not be nil")
 	}
 
-	resultVal.Elem().Set(a.reduction[:len(a.reduction)-1][0].Elem())
+	resultVal.Elem().Set(a.reduction[len(a.reduction)-1].Elem())
 }
 
 // Min returns the minimum value of the Aggregate Grouping, uses the Comparer interface if field
@@ -161,4 +161,12 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy string
 // groupBy is optional
 func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
 	return aggregateQuery(tx, dataType, query, groupBy)
+}
+
+// Print ...
+func (a *AggregateResult) Print(label string) {
+	fmt.Println(label + ": ")
+	for i := range a.reduction {
+		fmt.Println(a.reduction[i])
+	}
 }
