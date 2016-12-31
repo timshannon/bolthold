@@ -304,7 +304,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 
 				fieldType, ok := c.query.dataType.FieldByName(c.query.index)
 				if !ok {
-					return false, fmt.Errorf("Current row does not contain the field %s which has been indexed.",
+					return false, fmt.Errorf("current row does not contain the field %s which has been indexed",
 						c.query.index)
 				}
 				value = reflect.New(fieldType.Type).Interface()
