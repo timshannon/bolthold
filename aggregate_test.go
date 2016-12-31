@@ -42,7 +42,7 @@ func TestFindAggregateGroup(t *testing.T) {
 	})
 }
 
-//test min
-// test max
-// test avg
-// test count
+//test min / with / without grouping
+// test max / with / without grouping
+// test avg / with / without grouping
+// test count / with / without grouping
