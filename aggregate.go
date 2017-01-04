@@ -80,7 +80,9 @@ func (a *aggregateResultSort) Less(i, j int) bool {
 	return c == -1
 }
 
-func (a *AggregateResult) sort(field string) {
+// Sort sorts the aggregate reduction by the passed in field in ascending order
+// Sort is called automatically by calls to Min / Max to get the min and max values
+func (a *AggregateResult) Sort(field string) {
 	if !startsUpper(field) {
 		panic("The first letter of a field must be upper-case")
 	}
@@ -96,7 +98,7 @@ func (a *AggregateResult) sort(field string) {
 // Max Returns the maxiumum value of the Aggregate Grouping, uses the Comparer interface if field
 // can be automatically compared
 func (a *AggregateResult) Max(field string, result interface{}) {
-	a.sort(field)
+	a.Sort(field)
 
 	resultVal := reflect.ValueOf(result)
 	if resultVal.Kind() != reflect.Ptr {
@@ -113,7 +115,7 @@ func (a *AggregateResult) Max(field string, result interface{}) {
 // Min returns the minimum value of the Aggregate Grouping, uses the Comparer interface if field
 // can be automatically compared
 func (a *AggregateResult) Min(field string, result interface{}) {
-	a.sort(field)
+	a.Sort(field)
 
 	resultVal := reflect.ValueOf(result)
 	if resultVal.Kind() != reflect.Ptr {
@@ -161,12 +163,4 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy string
 // groupBy is optional
 func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
 	return aggregateQuery(tx, dataType, query, groupBy)
-}
-
-// Print ...
-func (a *AggregateResult) Print(label string) {
-	fmt.Println(label + ": ")
-	for i := range a.reduction {
-		fmt.Println(a.reduction[i])
-	}
 }

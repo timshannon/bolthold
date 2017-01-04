@@ -52,12 +52,11 @@ func TestFindAggregateGroup(t *testing.T) {
 
 			switch group {
 			case "animal":
-				result[i].Print("animal")
-				if !min.equal(&testData[5]) {
-					t.Fatalf("Expected animal min value of %v Got %v", testData[5], min)
+				if !min.equal(&testData[2]) {
+					t.Fatalf("Expected animal min value of %v Got %v", testData[2], min)
 				}
 				if !max.equal(&testData[14]) {
-					t.Fatalf("Expected animal max value of %v Got %v", testData[5], max)
+					t.Fatalf("Expected animal max value of %v Got %v", testData[14], max)
 				}
 
 				if result[i].Count() != 7 {
@@ -69,7 +68,7 @@ func TestFindAggregateGroup(t *testing.T) {
 					t.Fatalf("Expected food min value of %v Got %v", testData[7], min)
 				}
 				if !max.equal(&testData[15]) {
-					t.Fatalf("Expected food max value of %v Got %v", testData[7], max)
+					t.Fatalf("Expected food max value of %v Got %v", testData[15], max)
 				}
 
 				if result[i].Count() != 5 {
@@ -77,11 +76,11 @@ func TestFindAggregateGroup(t *testing.T) {
 				}
 
 			case "vehicle":
-				if !min.equal(&testData[1]) {
-					t.Fatalf("Expected vehicle min value of %v Got %v", testData[1], min)
+				if !min.equal(&testData[0]) {
+					t.Fatalf("Expected vehicle min value of %v Got %v", testData[0], min)
 				}
 				if !max.equal(&testData[11]) {
-					t.Fatalf("Expected vehicle max value of %v Got %v", testData[1], max)
+					t.Fatalf("Expected vehicle max value of %v Got %v", testData[11], max)
 				}
 
 				if result[i].Count() != 5 {

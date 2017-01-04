@@ -741,7 +741,8 @@ func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy str
 			result = append(result, nil)
 			copy(result[i+1:], result[i:])
 			result[i] = &AggregateResult{
-				group: fVal,
+				group:     fVal,
+				reduction: []reflect.Value{r.value},
 			}
 
 			return nil
