@@ -58,7 +58,10 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * In - `Where("field").In(val1, val2, val3)`
 * IsNil - `Where("field").IsNil()`
 * Regular Expression - `Where("field").RegExp(regexp.MustCompile("ea"))`
-* Matches Function - `Where("field").MatchFunc(func(field interface{}) (bool, error))`
+* Matches Function - `Where("field").MatchFunc(func(ra *RecordAccess) (bool, error))`
+* Skip - `Where("field").Eq(value).Skip(10)`
+* Limit - `Where("field").Eq(value).Limit(10)`
+
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
 ```Go
@@ -112,6 +115,45 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 	return nil
 })
 ```
+
+### Aggregate Queries
+
+Aggregate queries are queries that group results by a field.  For example, lets say you had a collection of employees:
+
+```Go
+type Employee struct {
+	FirstName string
+	LastName string
+	Division string
+	Hired time.Time
+}
+```
+
+And you wanted to find the most senior (first hired) employee in each division:
+
+```Go
+
+result, err := store.FindAggregate(&Employee{}, nil, "Division") //nil query matches against all records
+```
+
+This will return a slice of `Aggregate Result` from which you can extract your groups and find Min, Max, Avg, Count, 
+etc.
+
+```Go
+for i := range result {
+	var division string
+	employee := &Employee{}
+
+	result[i].Group(&division)
+	result[i].Min("Hired", employee)
+
+	fmt.Printf("The most senior employee in the %s division is %s.\n", 
+		division, employee.FirstName + " " + employee.LastName)
+}
+```
+
+Aggregate queries become especially powerful when combined with the sub-querying capability of `MatchFunc`.
+
 
 Many more examples of queries can be found in the [find_test.go](https://github.com/timshannon/bolthold/blob/master/find_test.go) 
 file in this repository.

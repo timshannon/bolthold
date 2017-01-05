@@ -93,3 +93,5 @@ func TestFindAggregateGroup(t *testing.T) {
 
 	})
 }
+
+//TODO: Test SubAggregate queries

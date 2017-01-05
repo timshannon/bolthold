@@ -129,8 +129,27 @@ func (a *AggregateResult) Min(field string, result interface{}) {
 	resultVal.Elem().Set(a.reduction[0].Elem())
 }
 
-// Avg returns the average value of the aggregate grouping
-func (a *AggregateResult) Avg(field string) (float64, error) {
+// AvgInt returns the average integer value of the aggregate grouping
+// returns an error if the field cannot be converted to an int64
+func (a *AggregateResult) AvgInt(field string) (int64, error) {
+	return 0, errors.New("TODO")
+}
+
+// AvgFloat returns the average float value of the aggregate grouping
+// returns an error if the field cannot be converted to an float64
+func (a *AggregateResult) AvgFloat(field string) (float64, error) {
+	return 0, errors.New("TODO")
+}
+
+// SumInt returns the sum value of the aggregate grouping
+// returns an error if the field cannot be converted to an int64
+func (a *AggregateResult) SumInt(field string) (int64, error) {
+	return 0, errors.New("TODO")
+}
+
+// SumFloat returns the sum value of the aggregate grouping
+// returns an error if the field cannot be converted to an float64
+func (a *AggregateResult) SumFloat(field string) (float64, error) {
 	return 0, errors.New("TODO")
 }
 

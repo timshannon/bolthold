@@ -284,6 +284,12 @@ func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
 	return findQuery(r.tx, result, query)
 }
 
+// SubAggregate allows you to run another aggregate query in the same transaction for each
+// record in a parent query
+func (r *RecordAccess) SubAggregate(query *Query, groupBy string) ([]*AggregateResult, error) {
+	return aggregateQuery(r.tx, r.record, query, groupBy)
+}
+
 // MatchFunc will test if a field matches the passed in function
 func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 	if c.query.currentField == Key {
