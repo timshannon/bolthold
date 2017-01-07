@@ -43,12 +43,15 @@ func TestFindAggregateGroup(t *testing.T) {
 		for i := range result {
 			min := &ItemTest{}
 			max := &ItemTest{}
+
 			var group string
 
 			result[i].Group(&group)
 
 			result[i].Min("ID", min)
 			result[i].Max("ID", max)
+			avg := result[i].Avg("ID")
+			sum := result[i].Sum("ID")
 
 			switch group {
 			case "animal":
@@ -63,6 +66,14 @@ func TestFindAggregateGroup(t *testing.T) {
 					t.Fatalf("Expected animal count of %d got %d", 7, result[i].Count())
 				}
 
+				if avg != 6.142857142857143 {
+					t.Fatalf("Expected animal AVG of %v got %v", 6.142857142857143, avg)
+				}
+
+				if sum != 43 {
+					t.Fatalf("Expected animal SUM of %v got %v", 43, sum)
+				}
+
 			case "food":
 				if !min.equal(&testData[7]) {
 					t.Fatalf("Expected food min value of %v Got %v", testData[7], min)
@@ -73,6 +84,14 @@ func TestFindAggregateGroup(t *testing.T) {
 
 				if result[i].Count() != 5 {
 					t.Fatalf("Expected food count of %d got %d", 5, result[i].Count())
+				}
+
+				if avg != 9.2 {
+					t.Fatalf("Expected food AVG of %v got %v", 9.2, avg)
+				}
+
+				if sum != 46 {
+					t.Fatalf("Expected food SUM of %v got %v", 46, sum)
 				}
 
 			case "vehicle":
@@ -86,6 +105,15 @@ func TestFindAggregateGroup(t *testing.T) {
 				if result[i].Count() != 5 {
 					t.Fatalf("Expected vehicle count of %d got %d", 5, result[i].Count())
 				}
+
+				if avg != 3.8 {
+					t.Fatalf("Expected vehicle AVG of %v got %v", 3.8, avg)
+				}
+
+				if sum != 19 {
+					t.Fatalf("Expected vehicle SUM of %v got %v", 19, sum)
+				}
+
 			}
 		}
 		// test avg

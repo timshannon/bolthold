@@ -5,7 +5,6 @@
 package bolthold
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -130,15 +129,27 @@ func (a *AggregateResult) Min(field string, result interface{}) {
 }
 
 // Avg returns the average float value of the aggregate grouping
-// returns an error if the field cannot be converted to an float64
-func (a *AggregateResult) Avg(field string) (float64, error) {
-	return 0, errors.New("TODO")
+// panics if the field cannot be converted to an float64
+func (a *AggregateResult) Avg(field string) float64 {
+	sum := a.Sum(field)
+	return sum / float64(len(a.reduction))
 }
 
 // Sum returns the sum value of the aggregate grouping
-// returns an error if the field cannot be converted to an float64
-func (a *AggregateResult) Sum(field string) (float64, error) {
-	return 0, errors.New("TODO")
+// panics if the field cannot be converted to an float64
+func (a *AggregateResult) Sum(field string) float64 {
+	var sum float64
+
+	for i := range a.reduction {
+		fVal := a.reduction[i].Elem().FieldByName(a.sortby)
+		if !fVal.IsValid() {
+			panic(fmt.Sprintf("The field %s does not exist in the type %s", field, a.reduction[i].Type()))
+		}
+
+		sum += tryFloat(fVal)
+	}
+
+	return sum
 }
 
 // Count returns the number of records in the aggregate grouping
@@ -170,4 +181,20 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy string
 // groupBy is optional
 func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
 	return aggregateQuery(tx, dataType, query, groupBy)
+}
+
+func tryFloat(val reflect.Value) float64 {
+	switch val.Kind() {
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8:
+		return float64(val.Int())
+	case reflect.Uint, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uint8:
+		return float64(val.Uint())
+	case reflect.Float32, reflect.Float64:
+		return val.Float()
+	default:
+		panic(fmt.Sprintf("The field is of Kind %s and cannot be converted to a float64", val.Kind()))
+	}
+
+	return 0
 }
