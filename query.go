@@ -284,10 +284,10 @@ func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
 	return findQuery(r.tx, result, query)
 }
 
-// SubAggregate allows you to run another aggregate query in the same transaction for each
+// SubAggregateQuery allows you to run another aggregate query in the same transaction for each
 // record in a parent query
-func (r *RecordAccess) SubAggregate(query *Query, groupBy string) ([]*AggregateResult, error) {
-	return aggregateQuery(r.tx, r.record, query, groupBy)
+func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*AggregateResult, error) {
+	return aggregateQuery(r.tx, r.record, query, groupBy...)
 }
 
 // MatchFunc will test if a field matches the passed in function
@@ -354,6 +354,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	case re:
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
 	case fn:
+		//FIXME: c.query.currentRow not set on indexed queries
 		return c.value.(MatchFunc)(&RecordAccess{
 			field:  value,
 			record: c.query.currentRow,
@@ -696,35 +697,52 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 	return nil
 }
 
-func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
+func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy ...string) ([]*AggregateResult, error) {
 	if query == nil {
 		query = &Query{}
 	}
 
 	var result []*AggregateResult
 
-	if groupBy == "" {
+	if len(groupBy) == 0 {
 		result = append(result, &AggregateResult{})
 	}
 
 	err := runQuery(tx, dataType, query, nil, query.skip,
 		func(r *record) error {
-			if groupBy == "" {
+			if len(groupBy) == 0 {
 				result[0].reduction = append(result[0].reduction, r.value)
 				return nil
 			}
 
-			fVal := r.value.Elem().FieldByName(groupBy)
-			if !fVal.IsValid() {
-				return fmt.Errorf("The field %s does not exist in the type %s", groupBy, r.value.Type())
+			grouping := make([]reflect.Value, len(groupBy))
+
+			for i := range groupBy {
+				fVal := r.value.Elem().FieldByName(groupBy[i])
+				if !fVal.IsValid() {
+					return fmt.Errorf("The field %s does not exist in the type %s", groupBy[i], r.value.Type())
+				}
+
+				grouping[i] = fVal
 			}
 
 			var err error
 			var c int
+			var allEqual bool
 
 			i := sort.Search(len(result), func(i int) bool {
-				c, err = compare(result[i].group.Interface(), fVal.Interface())
-				return c >= 0
+				for j := range grouping {
+					c, err = compare(result[i].group[j].Interface(), grouping[j].Interface())
+					if err != nil {
+						return true
+					}
+					if c != 0 {
+						return c >= 0
+					}
+					// if group part is equal, compare the next group part
+				}
+				allEqual = true
+				return true
 			})
 
 			if err != nil {
@@ -732,22 +750,18 @@ func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy str
 			}
 
 			if i < len(result) {
-				c, err := compare(result[i].group.Interface(), fVal.Interface())
-				if err != nil {
-					return err
-				}
-
-				if c == 0 {
+				if allEqual {
 					// group already exists, append results to reduction
 					result[i].reduction = append(result[i].reduction, r.value)
 					return nil
 				}
 			}
+
 			// group  not found, create another grouping at i
 			result = append(result, nil)
 			copy(result[i+1:], result[i:])
 			result[i] = &AggregateResult{
-				group:     fVal,
+				group:     grouping,
 				reduction: []reflect.Value{r.value},
 			}
 

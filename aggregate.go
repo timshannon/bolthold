@@ -15,7 +15,7 @@ import (
 // AggregateResult allows you to access the results of an aggregate query
 type AggregateResult struct {
 	reduction []reflect.Value // always pointers
-	group     reflect.Value
+	group     []reflect.Value
 	sortby    string
 }
 
@@ -26,7 +26,23 @@ func (a *AggregateResult) Group(result interface{}) {
 		panic("result argument must be an address")
 	}
 
-	resultVal.Elem().Set(a.group)
+	if len(a.group) == 1 && resultVal.Elem().Kind() != reflect.Slice {
+		resultVal.Elem().Set(a.group[0])
+		return
+	}
+
+	sliceVal := resultVal.Elem()
+	elType := sliceVal.Type().Elem()
+
+	for i := range a.group {
+		if elType.Kind() == reflect.Ptr {
+			sliceVal = reflect.Append(sliceVal, a.group[i])
+		} else {
+			sliceVal = reflect.Append(sliceVal, a.group[i].Elem())
+		}
+	}
+
+	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 }
 
 // Reduction is the collection of records that are part of the AggregateResult Group
@@ -159,11 +175,11 @@ func (a *AggregateResult) Count() int {
 
 // FindAggregate returns an aggregate grouping for the passed in query
 // groupBy is optional
-func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
+func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy ...string) ([]*AggregateResult, error) {
 	var result []*AggregateResult
 	var err error
 	err = s.Bolt().View(func(tx *bolt.Tx) error {
-		result, err = s.TxFindAggregate(tx, dataType, query, groupBy)
+		result, err = s.TxFindAggregate(tx, dataType, query, groupBy...)
 		if err != nil {
 			return err
 		}
@@ -179,8 +195,8 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy string
 
 // TxFindAggregate is the same as FindAggregate, but you specify your own transaction
 // groupBy is optional
-func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy string) ([]*AggregateResult, error) {
-	return aggregateQuery(tx, dataType, query, groupBy)
+func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy ...string) ([]*AggregateResult, error) {
+	return aggregateQuery(tx, dataType, query, groupBy...)
 }
 
 func tryFloat(val reflect.Value) float64 {

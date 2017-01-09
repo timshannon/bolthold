@@ -116,10 +116,8 @@ func TestFindAggregateGroup(t *testing.T) {
 
 			}
 		}
-		// test avg
-		// test count
 
 	})
 }
 
-//TODO: Test SubAggregate queries
+// TODO: Test multiple groupings

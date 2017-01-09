@@ -431,6 +431,21 @@ var tests = []test{
 		}),
 		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
+	test{
+		name: "Find item with max ID in each category - sub aggregate query",
+		query: bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			grp, err := ra.SubAggregateQuery(bolthold.Where("Category").Eq(ra.Field()), "Category")
+			if err != nil {
+				return false, err
+			}
+
+			maxID := 0
+
+			grp[0].Max("ID", &maxID)
+			return ra.Record().(*ItemTest).ID == maxID, nil
+		}),
+		result: []int{11, 14, 15},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -449,7 +464,6 @@ func TestFind(t *testing.T) {
 		for _, tst := range tests {
 			t.Run(tst.name, func(t *testing.T) {
 				var result []ItemTest
-
 				err := store.Find(&result, tst.query)
 				if err != nil {
 					t.Fatalf("Error finding data from bolthold: %s", err)
