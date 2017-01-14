@@ -433,16 +433,17 @@ var tests = []test{
 	},
 	test{
 		name: "Find item with max ID in each category - sub aggregate query",
-		query: bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
-			grp, err := ra.SubAggregateQuery(bolthold.Where("Category").Eq(ra.Field()), "Category")
+		query: bolthold.Where("ID").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			grp, err := ra.SubAggregateQuery(bolthold.Where("Category").
+				Eq(ra.Record().(*ItemTest).Category), "Category")
 			if err != nil {
 				return false, err
 			}
 
-			maxID := 0
+			max := &ItemTest{}
 
-			grp[0].Max("ID", &maxID)
-			return ra.Record().(*ItemTest).ID == maxID, nil
+			grp[0].Max("ID", max)
+			return ra.Field().(int) == max.ID, nil
 		}),
 		result: []int{11, 14, 15},
 	},

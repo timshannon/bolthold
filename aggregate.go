@@ -110,8 +110,7 @@ func (a *AggregateResult) Sort(field string) {
 	sort.Sort((*aggregateResultSort)(a))
 }
 
-// Max Returns the maxiumum value of the Aggregate Grouping, uses the Comparer interface if field
-// can be automatically compared
+// Max Returns the maxiumum value of the Aggregate Grouping, uses the Comparer interface
 func (a *AggregateResult) Max(field string, result interface{}) {
 	a.Sort(field)
 
@@ -127,8 +126,7 @@ func (a *AggregateResult) Max(field string, result interface{}) {
 	resultVal.Elem().Set(a.reduction[len(a.reduction)-1].Elem())
 }
 
-// Min returns the minimum value of the Aggregate Grouping, uses the Comparer interface if field
-// can be automatically compared
+// Min returns the minimum value of the Aggregate Grouping, uses the Comparer interface
 func (a *AggregateResult) Min(field string, result interface{}) {
 	a.Sort(field)
 

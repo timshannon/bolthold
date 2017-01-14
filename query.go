@@ -275,6 +275,10 @@ func (r *RecordAccess) Field() interface{} {
 
 // Record is the complete record for a given row in bolthold
 func (r *RecordAccess) Record() interface{} {
+	if r.record == nil {
+		// I don't like this, but it's better than not having access to Record for all other query types
+		panic("Current Record doesn't exists, because this criteria was executed on an index")
+	}
 	return r.record
 }
 
@@ -293,8 +297,9 @@ func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*Ag
 // MatchFunc will test if a field matches the passed in function
 func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 	if c.query.currentField == Key {
-		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against.")
+		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against")
 	}
+
 	return c.op(fn, match)
 }
 
@@ -354,7 +359,6 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	case re:
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
 	case fn:
-		//FIXME: c.query.currentRow not set on indexed queries
 		return c.value.(MatchFunc)(&RecordAccess{
 			field:  value,
 			record: c.query.currentRow,
