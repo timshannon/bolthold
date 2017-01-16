@@ -796,3 +796,21 @@ func TestKeyMatchFunc(t *testing.T) {
 		}))
 	})
 }
+
+func TestRecordOnIndexMatchFunc(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running matchFunc against an Index did not panic when trying to access the Record!")
+			}
+		}()
+
+		var result []ItemTest
+		_ = store.Find(&result, bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			ra.Record()
+			return false, nil
+		}))
+	})
+}

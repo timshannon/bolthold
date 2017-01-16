@@ -20,29 +20,19 @@ type AggregateResult struct {
 }
 
 // Group returns the field grouped by in the query
-func (a *AggregateResult) Group(result interface{}) {
-	resultVal := reflect.ValueOf(result)
-	if resultVal.Kind() != reflect.Ptr {
-		panic("result argument must be an address")
-	}
-
-	if len(a.group) == 1 && resultVal.Elem().Kind() != reflect.Slice {
-		resultVal.Elem().Set(a.group[0])
-		return
-	}
-
-	sliceVal := resultVal.Elem()
-	elType := sliceVal.Type().Elem()
-
-	for i := range a.group {
-		if elType.Kind() == reflect.Ptr {
-			sliceVal = reflect.Append(sliceVal, a.group[i])
-		} else {
-			sliceVal = reflect.Append(sliceVal, a.group[i].Elem())
+func (a *AggregateResult) Group(result ...interface{}) {
+	for i := range result {
+		resultVal := reflect.ValueOf(result[i])
+		if resultVal.Kind() != reflect.Ptr {
+			panic("result argument must be an address")
 		}
-	}
 
-	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
+		if i >= len(a.group) {
+			panic(fmt.Sprintf("There is not %d elements in the grouping", i))
+		}
+
+		resultVal.Elem().Set(a.group[i])
+	}
 }
 
 // Reduction is the collection of records that are part of the AggregateResult Group
@@ -155,7 +145,7 @@ func (a *AggregateResult) Sum(field string) float64 {
 	var sum float64
 
 	for i := range a.reduction {
-		fVal := a.reduction[i].Elem().FieldByName(a.sortby)
+		fVal := a.reduction[i].Elem().FieldByName(field)
 		if !fVal.IsValid() {
 			panic(fmt.Sprintf("The field %s does not exist in the type %s", field, a.reduction[i].Type()))
 		}
