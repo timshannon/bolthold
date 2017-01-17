@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
 	"unicode"
 
 	"github.com/boltdb/bolt"
@@ -274,6 +275,10 @@ func (r *RecordAccess) Field() interface{} {
 
 // Record is the complete record for a given row in bolthold
 func (r *RecordAccess) Record() interface{} {
+	if r.record == nil {
+		// I don't like this, but it's better than not having access to Record for all other query types
+		panic("Current Record doesn't exists, because this criteria was executed on an index")
+	}
 	return r.record
 }
 
@@ -283,11 +288,18 @@ func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
 	return findQuery(r.tx, result, query)
 }
 
+// SubAggregateQuery allows you to run another aggregate query in the same transaction for each
+// record in a parent query
+func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*AggregateResult, error) {
+	return aggregateQuery(r.tx, r.record, query, groupBy...)
+}
+
 // MatchFunc will test if a field matches the passed in function
 func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 	if c.query.currentField == Key {
-		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against.")
+		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against")
 	}
+
 	return c.op(fn, match)
 }
 
@@ -303,7 +315,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 
 				fieldType, ok := c.query.dataType.FieldByName(c.query.index)
 				if !ok {
-					return false, fmt.Errorf("Current row does not contain the field %s which has been indexed.",
+					return false, fmt.Errorf("current row does not contain the field %s which has been indexed",
 						c.query.index)
 				}
 				value = reflect.New(fieldType.Type).Interface()
@@ -687,4 +699,82 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 	}
 
 	return nil
+}
+
+func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy ...string) ([]*AggregateResult, error) {
+	if query == nil {
+		query = &Query{}
+	}
+
+	var result []*AggregateResult
+
+	if len(groupBy) == 0 {
+		result = append(result, &AggregateResult{})
+	}
+
+	err := runQuery(tx, dataType, query, nil, query.skip,
+		func(r *record) error {
+			if len(groupBy) == 0 {
+				result[0].reduction = append(result[0].reduction, r.value)
+				return nil
+			}
+
+			grouping := make([]reflect.Value, len(groupBy))
+
+			for i := range groupBy {
+				fVal := r.value.Elem().FieldByName(groupBy[i])
+				if !fVal.IsValid() {
+					return fmt.Errorf("The field %s does not exist in the type %s", groupBy[i], r.value.Type())
+				}
+
+				grouping[i] = fVal
+			}
+
+			var err error
+			var c int
+			var allEqual bool
+
+			i := sort.Search(len(result), func(i int) bool {
+				for j := range grouping {
+					c, err = compare(result[i].group[j].Interface(), grouping[j].Interface())
+					if err != nil {
+						return true
+					}
+					if c != 0 {
+						return c >= 0
+					}
+					// if group part is equal, compare the next group part
+				}
+				allEqual = true
+				return true
+			})
+
+			if err != nil {
+				return err
+			}
+
+			if i < len(result) {
+				if allEqual {
+					// group already exists, append results to reduction
+					result[i].reduction = append(result[i].reduction, r.value)
+					return nil
+				}
+			}
+
+			// group  not found, create another grouping at i
+			result = append(result, nil)
+			copy(result[i+1:], result[i:])
+			result[i] = &AggregateResult{
+				group:     grouping,
+				reduction: []reflect.Value{r.value},
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
