@@ -39,7 +39,7 @@ Optionally, you can implement the `Storer` interface, to specify your own indexe
 struct tag.
 
 ## Queries
-Queries will be chain-able constructs that filters out any data that doesn't match it's criteria. There will be no 
+Queries are chain-able constructs that filters out any data that doesn't match it's criteria. There will be no 
 "query optimiser". The first field listed in the query will be the index that the query starts at (if one exists).
 
 Queries will look like this:
@@ -110,7 +110,7 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 		return fmt.Errorf("Record isn't the correct type!  Wanted Person, got %T", record)
 	}
 
-	update.Birth, updated.Death = updated.Death, updated.Birth
+	update.Birth, update.Death = update.Death, update.Birth
 
 	return nil
 })
