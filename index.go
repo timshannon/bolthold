@@ -36,11 +36,12 @@ func indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
 }
 
 // removes an item from the index
-func indexDelete(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
+// be sure to pass the data from the old record, not the new one
+func indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData interface{}) error {
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		err := indexUpdate(storer.Type(), name, index, tx, key, data, true)
+		err := indexUpdate(storer.Type(), name, index, tx, key, originalData, true)
 		if err != nil {
 			return err
 		}

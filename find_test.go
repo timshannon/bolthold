@@ -24,6 +24,7 @@ type ItemTest struct {
 	Color       string
 	Fruit       string
 	UpdateField string
+	UpdateIndex string `boltholdIndex:"UpdateIndex"`
 }
 
 func (i *ItemTest) equal(other *ItemTest) bool {

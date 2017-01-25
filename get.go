@@ -43,11 +43,6 @@ func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
 	return decode(value, result)
 }
 
-// exists returns if the given key exists in the passed in storer bucket
-func (s *Store) exists(tx *bolt.Tx, key []byte, storer Storer) bool {
-	return (tx.Bucket([]byte(storer.Type())).Get(key) != nil)
-}
-
 // Find retrieves a set of values from the bolthold that matches the passed in query
 // result must be a pointer to a slice.
 // The result of the query will be appended to the passed in result slice, rather than the passed in slice being

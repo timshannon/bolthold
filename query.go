@@ -671,7 +671,14 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 
 	for i := range records {
 		upVal := records[i].value.Interface()
-		err := update(upVal)
+
+		// delete any existing indexes bad on original value
+		err := indexDelete(storer, tx, records[i].key, upVal)
+		if err != nil {
+			return err
+		}
+
+		err = update(upVal)
 		if err != nil {
 			return err
 		}
@@ -686,11 +693,6 @@ func updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(re
 			return err
 		}
 
-		// delete any existing indexes
-		err = indexDelete(storer, tx, records[i].key, upVal)
-		if err != nil {
-			return err
-		}
 		// insert any new indexes
 		err = indexAdd(storer, tx, records[i].key, upVal)
 		if err != nil {
