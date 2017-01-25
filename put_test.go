@@ -17,8 +17,9 @@ func TestInsert(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Insert(key, data)
@@ -54,8 +55,9 @@ func TestInsertReadTxn(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Bolt().View(func(tx *bolt.Tx) error {
@@ -73,8 +75,9 @@ func TestUpdate(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Update(key, data)
@@ -99,8 +102,9 @@ func TestUpdate(t *testing.T) {
 		}
 
 		update := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name Updated",
+			Category: "Test Category Updated",
+			Created:  time.Now(),
 		}
 
 		// test duplicate insert
@@ -126,8 +130,9 @@ func TestUpdateReadTxn(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Bolt().View(func(tx *bolt.Tx) error {
@@ -145,8 +150,9 @@ func TestUpsert(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Upsert(key, data)
@@ -166,8 +172,9 @@ func TestUpsert(t *testing.T) {
 		}
 
 		update := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name Updated",
+			Category: "Test Category Updated",
+			Created:  time.Now(),
 		}
 
 		// test duplicate insert
@@ -192,8 +199,9 @@ func TestUpsertReadTxn(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		key := "testKey"
 		data := &ItemTest{
-			Name:    "Test Name",
-			Created: time.Now(),
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
 		}
 
 		err := store.Bolt().View(func(tx *bolt.Tx) error {
@@ -221,6 +229,7 @@ func TestUpdateMatching(t *testing.T) {
 					}
 
 					update.UpdateField = "updated"
+					update.UpdateIndex = "updated index"
 
 					return nil
 				})
@@ -230,7 +239,7 @@ func TestUpdateMatching(t *testing.T) {
 				}
 
 				var result []ItemTest
-				err = store.Find(&result, bolthold.Where("UpdateField").Eq("updated"))
+				err = store.Find(&result, bolthold.Where("UpdateIndex").Eq("updated index").And("UpdateField").Eq("updated"))
 				if err != nil {
 					t.Fatalf("Error finding result after update from bolthold: %s", err)
 				}
@@ -248,7 +257,8 @@ func TestUpdateMatching(t *testing.T) {
 					found := false
 					for k := range tst.result {
 						if result[i].Key == testData[tst.result[k]].Key &&
-							result[i].UpdateField == "updated" {
+							result[i].UpdateField == "updated" &&
+							result[i].UpdateIndex == "updated index" {
 							found = true
 							break
 						}
@@ -267,4 +277,125 @@ func TestUpdateMatching(t *testing.T) {
 
 		})
 	}
+}
+
+func TestIssue14(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+		err := store.Insert(key, data)
+		if err != nil {
+			t.Fatalf("Error creating data for update test: %s", err)
+		}
+
+		update := &ItemTest{
+			Name:     "Test Name Updated",
+			Category: "Test Category Updated",
+			Created:  time.Now(),
+		}
+
+		err = store.Update(key, update)
+
+		if err != nil {
+			t.Fatalf("Error updating data: %s", err)
+		}
+
+		var result []ItemTest
+		// try to find the record on the old index value
+		err = store.Find(&result, bolthold.Where("Category").Eq("Test Category"))
+		if err != nil {
+			t.Fatalf("Error retrieving query result for TestIssue14: %s", err)
+		}
+
+		if len(result) != 0 {
+			t.Fatalf("Old index still exists after update.  Expected %d got %d!", 0, len(result))
+		}
+
+	})
+}
+
+func TestIssue14Upsert(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+		err := store.Insert(key, data)
+		if err != nil {
+			t.Fatalf("Error creating data for update test: %s", err)
+		}
+
+		update := &ItemTest{
+			Name:     "Test Name Updated",
+			Category: "Test Category Updated",
+			Created:  time.Now(),
+		}
+
+		err = store.Upsert(key, update)
+
+		if err != nil {
+			t.Fatalf("Error updating data: %s", err)
+		}
+
+		var result []ItemTest
+		// try to find the record on the old index value
+		err = store.Find(&result, bolthold.Where("Category").Eq("Test Category"))
+		if err != nil {
+			t.Fatalf("Error retrieving query result for TestIssue14: %s", err)
+		}
+
+		if len(result) != 0 {
+			t.Fatalf("Old index still exists after update.  Expected %d got %d!", 0, len(result))
+		}
+
+	})
+}
+
+func TestIssue14UpdateMatching(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+		err := store.Insert(key, data)
+		if err != nil {
+			t.Fatalf("Error creating data for update test: %s", err)
+		}
+
+		err = store.UpdateMatching(&ItemTest{}, bolthold.Where("Name").Eq("Test Name"),
+			func(record interface{}) error {
+				update, ok := record.(*ItemTest)
+				if !ok {
+					return fmt.Errorf("Record isn't the correct type!  Wanted Itemtest, got %T", record)
+				}
+
+				update.Category = "Test Category Updated"
+
+				return nil
+			})
+
+		if err != nil {
+			t.Fatalf("Error updating data: %s", err)
+		}
+
+		var result []ItemTest
+		// try to find the record on the old index value
+		err = store.Find(&result, bolthold.Where("Category").Eq("Test Category"))
+		if err != nil {
+			t.Fatalf("Error retrieving query result for TestIssue14: %s", err)
+		}
+
+		if len(result) != 0 {
+			t.Fatalf("Old index still exists after update.  Expected %d got %d!", 0, len(result))
+		}
+
+	})
 }

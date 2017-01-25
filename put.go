@@ -6,6 +6,7 @@ package bolthold
 
 import (
 	"errors"
+	"reflect"
 
 	"github.com/boltdb/bolt"
 )
@@ -40,7 +41,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return err
 	}
 
-	if s.exists(tx, gk, storer) {
+	if b.Get(gk) != nil {
 		return ErrKeyExists
 	}
 
@@ -92,8 +93,23 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	if !s.exists(tx, gk, storer) {
+	existing := b.Get(gk)
+
+	if existing == nil {
 		return ErrNotFound
+	}
+
+	// delete any existing indexes
+	existingVal := reflect.New(reflect.TypeOf(data)).Interface()
+
+	err = decode(existing, existingVal)
+	if err != nil {
+		return err
+	}
+
+	err = indexDelete(storer, tx, gk, existingVal)
+	if err != nil {
+		return err
 	}
 
 	value, err := encode(data)
@@ -107,11 +123,6 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	// delete any existing indexes
-	err = indexDelete(storer, tx, gk, data)
-	if err != nil {
-		return err
-	}
 	// insert any new indexes
 	err = indexAdd(storer, tx, gk, data)
 	if err != nil {
@@ -148,7 +159,24 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	exists := s.exists(tx, gk, storer)
+	existing := b.Get(gk)
+
+	if existing != nil {
+
+		// delete any existing indexes
+		existingVal := reflect.New(reflect.TypeOf(data)).Interface()
+
+		err = decode(existing, existingVal)
+		if err != nil {
+			return err
+		}
+
+		err = indexDelete(storer, tx, gk, existingVal)
+		if err != nil {
+			return err
+		}
+
+	}
 
 	value, err := encode(data)
 	if err != nil {
@@ -159,14 +187,6 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	err = b.Put(gk, value)
 	if err != nil {
 		return err
-	}
-
-	if exists {
-		// delete any existing indexes
-		err = indexDelete(storer, tx, gk, data)
-		if err != nil {
-			return err
-		}
 	}
 
 	// insert any new indexes
