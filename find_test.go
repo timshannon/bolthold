@@ -448,6 +448,11 @@ var tests = []test{
 		}),
 		result: []int{11, 14, 15},
 	},
+	test{
+		name:   "Indexed in",
+		query:  bolthold.Where("Category").In("animal", "vehicle"),
+		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {

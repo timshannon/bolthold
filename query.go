@@ -327,6 +327,13 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 				// in order to decode, we needed a pointer, but matchFunc is expecting the original
 				// type, so we need to get an interface of the actual element, not the pointer
 				value = reflect.ValueOf(value).Elem().Interface()
+			} else if c.operator == in {
+				// value is a slice of values, use c.inValues
+				value = reflect.New(reflect.TypeOf(c.inValues[0])).Interface()
+				err := decode(testValue.([]byte), value)
+				if err != nil {
+					return false, err
+				}
 
 			} else {
 				// used with keys
