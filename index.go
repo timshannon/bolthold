@@ -82,6 +82,14 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 		indexValue.add(key)
 	}
 
+	if len(indexValue) == 0 {
+		err := b.Delete(indexKey)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	iVal, err = encode(indexValue)
 	if err != nil {
 		return err
