@@ -1,4 +1,5 @@
-#BoltHold [![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
+# BoldHold 
+[![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
 
 
 BoltHold is a simple querying and indexing layer on top of a Bolt DB instance. The goal is to create a simple,
@@ -15,7 +16,7 @@ I love BoltDB, and I've used it in several projects.  However, I find myself wri
 for encoding and decoding objects and searching through data.  I figure formalizing how I've been using BoltDB 
 and including tests and benchmarks will, at a minimum, be useful to me.  Maybe it'll be useful to others as well.
 
-##Indexes
+## Indexes
 Indexes allow you to skip checking any records that don't meet your index criteria.  If you have 1000 records and only
 10 of them are of the Division you want to deal with, then you don't need to check to see if the other 990 records match
 your query criteria if you create an index on the Division field.  The downside of an index is added disk reads and writes
