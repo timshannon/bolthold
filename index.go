@@ -11,8 +11,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-// BoltHoldIndexTag is the struct tag used to define an a field as indexable for a bolthold
-const BoltHoldIndexTag = "boltholdIndex"
+// BoltholdIndexTag is the struct tag used to define an a field as indexable for a bolthold
+const BoltholdIndexTag = "boltholdIndex"
 
 const indexBucketPrefix = "_index"
 

@@ -820,3 +820,65 @@ func TestRecordOnIndexMatchFunc(t *testing.T) {
 		}))
 	})
 }
+
+func TestKeyStructTag(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type KeyTest struct {
+			Key   int `boltholdKey`
+			Value string
+		}
+
+		key := 3
+
+		err := store.Insert(key, &KeyTest{
+			Value: "test value",
+		})
+
+		if err != nil {
+			t.Fatalf("Error inserting KeyTest struct for Key struct tag testing. Error: %s", err)
+		}
+
+		var result []KeyTest
+
+		err = store.Find(&result, bolthold.Where(bolthold.Key).Eq(key))
+		if err != nil {
+			t.Fatalf("Error running Find in TestKeyStructTag. ERROR: %s", err)
+		}
+
+		if result[0].Key != key {
+			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
+		}
+
+	})
+}
+
+func TestKeyStructTagIntoPtr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type KeyTest struct {
+			Key   *int `boltholdKey`
+			Value string
+		}
+
+		key := 3
+
+		err := store.Insert(&key, &KeyTest{
+			Value: "test value",
+		})
+
+		if err != nil {
+			t.Fatalf("Error inserting KeyTest struct for Key struct tag testing. Error: %s", err)
+		}
+
+		var result []KeyTest
+
+		err = store.Find(&result, bolthold.Where(bolthold.Key).Eq(key))
+		if err != nil {
+			t.Fatalf("Error running Find in TestKeyStructTag. ERROR: %s", err)
+		}
+
+		if *result[0].Key != key {
+			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
+		}
+
+	})
+}

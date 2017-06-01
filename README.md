@@ -117,6 +117,23 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 })
 ```
 
+### Keys in Structs
+
+A common scenario is to store the bolthold Key in the same struct that is stored in the boltDB value.  You can 
+automatically populate a record's Key in a struct by using the `boltholdKey` struct tag when running `Find` queries.
+
+```Go
+type Employee struct {
+	ID string `boltholdKey` 
+	FirstName string
+	LastName string
+	Division string
+	Hired time.Time
+}
+```
+
+Bolthold assumes only one of such struct tags exists. If a value already exists in the key field, it will be overwritten.
+
 ### Aggregate Queries
 
 Aggregate queries are queries that group results by a field.  For example, lets say you had a collection of employees:
