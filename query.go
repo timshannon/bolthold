@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
 	"unicode"
 
 	"github.com/boltdb/bolt"
@@ -30,6 +31,9 @@ const (
 // Key is shorthand for specifying a query to run again the Key in a bolthold, simply returns ""
 // Where(bolthold.Key).Eq("testkey")
 const Key = ""
+
+// BoltholdKeyTag is the struct tag used to define an a field as a key for use in a Find query
+const BoltholdKeyTag = "boltholdKey"
 
 // Query is a chained collection of criteria of which an object in the bolthold needs to match to be returned
 // an empty query matches against all records
@@ -595,15 +599,37 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 		tp = tp.Elem()
 	}
 
+	var keyType reflect.Type
+	var keyField string
+
+	for i := 0; i < tp.NumField(); i++ {
+		if strings.Contains(string(tp.Field(i).Tag), BoltholdKeyTag) {
+			keyType = tp.Field(i).Type
+			keyField = tp.Field(i).Name
+			break
+		}
+	}
+
 	val := reflect.New(tp)
 
 	err := runQuery(tx, val.Interface(), query, nil, query.skip,
 		func(r *record) error {
+			var rowValue reflect.Value
+
 			if elType.Kind() == reflect.Ptr {
-				sliceVal = reflect.Append(sliceVal, r.value)
+				rowValue = r.value
 			} else {
-				sliceVal = reflect.Append(sliceVal, r.value.Elem())
+				rowValue = r.value.Elem()
 			}
+
+			if keyType != nil {
+				err := decode(r.key, rowValue.FieldByName(keyField).Addr().Interface())
+				if err != nil {
+					return err
+				}
+			}
+
+			sliceVal = reflect.Append(sliceVal, rowValue)
 
 			return nil
 		})

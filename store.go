@@ -184,8 +184,8 @@ func newStorer(dataType interface{}) Storer {
 	}
 
 	for i := 0; i < storer.rType.NumField(); i++ {
-		if strings.Contains(string(storer.rType.Field(i).Tag), BoltHoldIndexTag) {
-			indexName := storer.rType.Field(i).Tag.Get(BoltHoldIndexTag)
+		if strings.Contains(string(storer.rType.Field(i).Tag), BoltholdIndexTag) {
+			indexName := storer.rType.Field(i).Tag.Get(BoltholdIndexTag)
 
 			if indexName != "" {
 				indexName = storer.rType.Field(i).Name
