@@ -35,7 +35,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		// test duplicate insert
@@ -98,7 +98,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		update := &ItemTest{
@@ -120,7 +120,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		if !result.equal(update) {
-			t.Fatalf("Update didn't complete.  Expected %s, got %s", update, result)
+			t.Fatalf("Update didn't complete.  Expected %v, got %v", update, result)
 		}
 
 	})
@@ -168,7 +168,7 @@ func TestUpsert(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		update := &ItemTest{
@@ -190,7 +190,7 @@ func TestUpsert(t *testing.T) {
 		}
 
 		if !result.equal(update) {
-			t.Fatalf("Upsert didn't complete.  Expected %s, got %s", update, result)
+			t.Fatalf("Upsert didn't complete.  Expected %v, got %v", update, result)
 		}
 	})
 }

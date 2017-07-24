@@ -81,7 +81,7 @@ func TestDeleteMatching(t *testing.T) {
 						if testing.Verbose() {
 							t.Fatalf("Found %v in the result set when it should've been deleted! Full results: %v", result[i], result)
 						}
-						t.Fatalf("Found %v in the result set when it should've been deleted! Full results: %v", result[i])
+						t.Fatalf("Found %v in the result set when it should've been deleted!", result[i])
 					}
 				}
 

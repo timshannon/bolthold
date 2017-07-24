@@ -48,8 +48,9 @@ type Query struct {
 	dataType   reflect.Type
 	tx         *bolt.Tx
 
-	limit int
-	skip  int
+	limit  int
+	skip   int
+	source string
 }
 
 // IsEmpty returns true if the query is an empty query

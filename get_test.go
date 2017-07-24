@@ -31,7 +31,7 @@ func TestGet(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 	})
 }

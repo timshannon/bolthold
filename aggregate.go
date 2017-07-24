@@ -199,6 +199,4 @@ func tryFloat(val reflect.Value) float64 {
 	default:
 		panic(fmt.Sprintf("The field is of Kind %s and cannot be converted to a float64", val.Kind()))
 	}
-
-	return 0
 }

@@ -124,7 +124,7 @@ automatically populate a record's Key in a struct by using the `boltholdKey` str
 
 ```Go
 type Employee struct {
-	ID string `boltholdKey` 
+	ID string `boltholdKey:"ID"`  // the tagName isn't required, but some linters will complain without it
 	FirstName string
 	LastName string
 	Division string
