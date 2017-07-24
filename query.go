@@ -48,9 +48,10 @@ type Query struct {
 	dataType   reflect.Type
 	tx         *bolt.Tx
 
-	limit  int
-	skip   int
-	source string
+	limit   int
+	skip    int
+	sort    []string
+	reverse bool
 }
 
 // IsEmpty returns true if the query is an empty query
@@ -145,6 +146,34 @@ func (q *Query) Limit(amount int) *Query {
 
 	q.limit = amount
 
+	return q
+}
+
+// SortBy sorts the results by the given fields name
+// Multiple fields can be used
+func (q *Query) SortBy(fields ...string) *Query {
+	for i := range fields {
+		if fields[i] == Key {
+			panic("Cannot sort by Key.")
+		}
+		found := false
+		for k := range q.sort {
+			if q.sort[k] == fields[i] {
+				found = true
+				break
+			}
+		}
+		if !found {
+			q.sort = append(q.sort, fields[i])
+		}
+	}
+	return q
+}
+
+// Reverse will reverse the current result set
+// useful with SortBy
+func (q *Query) Reverse() *Query {
+	q.reverse = !q.reverse
 	return q
 }
 
@@ -499,6 +528,89 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	}
 
 	query.dataType = reflect.TypeOf(tp)
+
+	if len(query.sort) > 0 {
+		// Validate sort fields
+		for _, field := range query.sort {
+			_, found := query.dataType.FieldByName(field)
+			if !found {
+				return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
+			}
+		}
+
+		// Run query without sort, skip or limit
+		qCopy := *query
+		qCopy.sort = nil
+		qCopy.limit = 0
+		qCopy.skip = 0
+
+		var records []*record
+		err := runQuery(tx, dataType, &qCopy, nil, query.skip,
+			func(r *record) error {
+				records = append(records, r)
+
+				return nil
+			})
+
+		if err != nil {
+			return err
+		}
+
+		sort.Slice(records, func(i, j int) bool {
+			for _, field := range query.sort {
+				var value interface{}
+				var other interface{}
+				if query.dataType.Kind() == reflect.Ptr {
+					value = records[i].value.Elem().FieldByName(field).Interface()
+					other = records[j].value.Elem().FieldByName(field).Interface()
+				} else {
+					value = records[i].value.FieldByName(field).Interface()
+					other = records[j].value.FieldByName(field).Interface()
+				}
+
+				cmp, cerr := compare(value, other)
+				if cerr != nil {
+					// if for some reason there is an error on compare, fallback to a lexicographic compare
+					valS := fmt.Sprintf("%s", value)
+					otherS := fmt.Sprintf("%s", other)
+					if valS < otherS {
+						return true
+					} else if valS == otherS {
+						continue
+					}
+					return false
+				}
+
+				if cmp == -1 {
+					return true
+				} else if cmp == 0 {
+					continue
+				}
+				return false
+			}
+			return false
+		})
+		// apply skip and limit
+		limit := query.limit
+		skip := query.skip
+		if limit > len(records) {
+			limit = len(records)
+		}
+		if skip > len(records) {
+			records = records[0:0]
+		} else {
+			records = records[skip : skip+limit]
+		}
+
+		for i := range records {
+			err = action(records[i])
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
 
 	iter := newIterator(tx, storer.Type(), query)
 

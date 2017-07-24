@@ -62,6 +62,8 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Matches Function - `Where("field").MatchFunc(func(ra *RecordAccess) (bool, error))`
 * Skip - `Where("field").Eq(value).Skip(10)`
 * Limit - `Where("field").Eq(value).Limit(10)`
+* SortBy - `Where("field").Eq(value).SortBy("field1", "field2")`
+* Reverse - `Where("field").Eq(value).SortBy("field").Reverse()`
 
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:

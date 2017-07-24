@@ -58,7 +58,6 @@ func (a *AggregateResult) Reduction(result interface{}) {
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 }
 
-//TODO: replace with 1.8 sort.Slice
 type aggregateResultSort AggregateResult
 
 func (a *aggregateResultSort) Len() int { return len(a.reduction) }
