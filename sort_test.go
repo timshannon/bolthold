@@ -14,13 +14,13 @@ import (
 var sortTests = []test{
 	test{
 		name:   "Sort By Name",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name"),
-		result: []int{0, 11, 1, 3, 6},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name"),
+		result: []int{9, 5, 14, 8, 13, 2, 16},
 	},
 	test{
 		name:   "Sort By Name Reversed",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse(),
-		result: []int{6, 3, 1, 11, 0},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Reverse(),
+		result: []int{16, 2, 13, 8, 14, 5, 9},
 	},
 	test{
 		name:   "Sort By Multiple Fields",
@@ -39,33 +39,38 @@ var sortTests = []test{
 	},
 	test{
 		name:   "Sort By Name with limit",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Limit(3),
-		result: []int{0, 11, 1},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Limit(3),
+		result: []int{9, 5, 14},
 	},
 	test{
 		name:   "Sort By Name with skip",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Skip(3),
-		result: []int{3, 6},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(3),
+		result: []int{8, 13, 2, 16},
 	},
 	test{
 		name:   "Sort By Name with skip and limit",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Skip(1).Limit(3),
-		result: []int{11, 1, 3},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
+		result: []int{14, 8, 13},
 	},
 	test{
 		name:   "Sort By Name Reversed with limit",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Limit(3),
-		result: []int{6, 3, 1},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
+		result: []int{14, 8, 13},
 	},
 	test{
 		name:   "Sort By Name Reversed with skip",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Skip(3),
-		result: []int{11, 0},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(4),
+		result: []int{13, 2, 16},
 	},
 	test{
 		name:   "Sort By Name Reversed with skip and limit",
-		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Skip(1).Limit(3),
-		result: []int{3, 1, 11},
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
+		result: []int{14, 8, 13},
+	},
+	test{
+		name:   "Sort By Name with skip greater than length",
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(10),
+		result: []int{},
 	},
 }
 
@@ -90,6 +95,10 @@ func TestSortedFind(t *testing.T) {
 
 				for i := range result {
 					if !result[i].equal(&testData[tst.result[i]]) {
+						if testing.Verbose() {
+							t.Fatalf("Expected index %d to be %v, Got %v Results: %v", i, &testData[tst.result[i]],
+								result[i], result)
+						}
 						t.Fatalf("Expected index %d to be %v, Got %v", i, &testData[tst.result[i]], result[i])
 					}
 				}
@@ -223,5 +232,30 @@ func TestSortOnKey(t *testing.T) {
 
 		var result []ItemTest
 		_ = store.Find(&result, bolthold.Where("Name").Eq("blah").SortBy(bolthold.Key))
+	})
+}
+
+func TestSortedFindOnInvalidFieldName(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+
+		err := store.Find(&result, bolthold.Where("BadFieldName").Eq("test").SortBy("BadFieldName"))
+		if err == nil {
+			t.Fatalf("Sorted find query against a bad field name didn't return an error!")
+		}
+
+	})
+}
+
+func TestSortedFindWithNonSlicePtr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running Find with non-slice pointer did not panic!")
+			}
+		}()
+		var result []ItemTest
+		_ = store.Find(result, bolthold.Where("Name").Eq("blah").SortBy("Name"))
 	})
 }

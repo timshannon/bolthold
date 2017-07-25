@@ -539,13 +539,14 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 		}
 
 		// Run query without sort, skip or limit
+		// apply sort, skip and limit to entire dataset
 		qCopy := *query
 		qCopy.sort = nil
 		qCopy.limit = 0
 		qCopy.skip = 0
 
 		var records []*record
-		err := runQuery(tx, dataType, &qCopy, nil, query.skip,
+		err := runQuery(tx, dataType, &qCopy, nil, 0,
 			func(r *record) error {
 				records = append(records, r)
 
@@ -599,16 +600,14 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 		limit := query.limit
 		skip := query.skip
 
-		if limit == 0 {
-			limit = len(records)
-		}
-		if limit > len(records) {
-			limit = len(records)
-		}
 		if skip > len(records) {
 			records = records[0:0]
 		} else {
-			records = records[skip : skip+limit]
+			records = records[skip:]
+		}
+
+		if limit > 0 && limit <= len(records) {
+			records = records[:limit]
 		}
 
 		for i := range records {
