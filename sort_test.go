@@ -37,6 +37,36 @@ var sortTests = []test{
 		query:  bolthold.Where("ID").In(8, 3, 13).SortBy("Category", "Name", "Category"),
 		result: []int{13, 15, 4, 3},
 	},
+	test{
+		name:   "Sort By Name with limit",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Limit(3),
+		result: []int{0, 11, 1},
+	},
+	test{
+		name:   "Sort By Name with skip",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Skip(3),
+		result: []int{3, 6},
+	},
+	test{
+		name:   "Sort By Name with skip and limit",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Skip(1).Limit(3),
+		result: []int{11, 1, 3},
+	},
+	test{
+		name:   "Sort By Name Reversed with limit",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Limit(3),
+		result: []int{6, 3, 1},
+	},
+	test{
+		name:   "Sort By Name Reversed with skip",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Skip(3),
+		result: []int{11, 0},
+	},
+	test{
+		name:   "Sort By Name Reversed with skip and limit",
+		query:  bolthold.Where("Category").Eq("vehicle").SortBy("Name").Reverse().Skip(1).Limit(3),
+		result: []int{3, 1, 11},
+	},
 }
 
 func TestSortedFind(t *testing.T) {

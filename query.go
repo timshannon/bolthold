@@ -561,11 +561,15 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 				var value interface{}
 				var other interface{}
 				if query.dataType.Kind() == reflect.Ptr {
-					value = records[i].value.Elem().FieldByName(field).Interface()
-					other = records[j].value.Elem().FieldByName(field).Interface()
-				} else {
 					value = records[i].value.FieldByName(field).Interface()
 					other = records[j].value.FieldByName(field).Interface()
+				} else {
+					value = records[i].value.Elem().FieldByName(field).Interface()
+					other = records[j].value.Elem().FieldByName(field).Interface()
+				}
+
+				if query.reverse {
+					value, other = other, value
 				}
 
 				cmp, cerr := compare(value, other)
@@ -590,9 +594,14 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 			}
 			return false
 		})
+
 		// apply skip and limit
 		limit := query.limit
 		skip := query.skip
+
+		if limit == 0 {
+			limit = len(records)
+		}
 		if limit > len(records) {
 			limit = len(records)
 		}
