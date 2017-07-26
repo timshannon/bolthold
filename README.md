@@ -62,6 +62,8 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Matches Function - `Where("field").MatchFunc(func(ra *RecordAccess) (bool, error))`
 * Skip - `Where("field").Eq(value).Skip(10)`
 * Limit - `Where("field").Eq(value).Limit(10)`
+* SortBy - `Where("field").Eq(value).SortBy("field1", "field2")`
+* Reverse - `Where("field").Eq(value).SortBy("field").Reverse()`
 
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
@@ -124,15 +126,23 @@ automatically populate a record's Key in a struct by using the `boltholdKey` str
 
 ```Go
 type Employee struct {
-	ID string `boltholdKey` 
+	ID string `boltholdKey:"ID"`  // the tagName isn't required, but some linters will complain without it
 	FirstName string
 	LastName string
 	Division string
 	Hired time.Time
 }
 ```
-
 Bolthold assumes only one of such struct tags exists. If a value already exists in the key field, it will be overwritten.
+
+If you want to insert an auto-incrementing Key you can pass the `bolthold.NextSequence()` func as the Key value.
+
+```Go
+err := store.Insert(bolthold.NextSequence(), data)
+```
+
+The key value will be a `uint`.
+
 
 ### Aggregate Queries
 

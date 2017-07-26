@@ -14,6 +14,16 @@ import (
 // ErrKeyExists is the error returned when data is being Inserted for a Key that already exists
 var ErrKeyExists = errors.New("This Key already exists in this bolthold for this type")
 
+// sequence tells bolthold to insert the key as the next sequence in the bucket
+type sequence struct{}
+
+// NextSequence is used to create a sequential key for inserts
+// Inserts a uint64 as the key
+// store.Insert(bolthold.NextSequence(), data)
+func NextSequence() interface{} {
+	return sequence{}
+}
+
 // Insert inserts the passed in data into the the bolthold
 // If the the key already exists in the bolthold, then an ErrKeyExists is returned
 func (s *Store) Insert(key, data interface{}) error {
@@ -30,13 +40,20 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 
 	storer := newStorer(data)
 
-	gk, err := encode(key)
-
+	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
 	if err != nil {
 		return err
 	}
 
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	if _, ok := key.(sequence); ok {
+		key, err = b.NextSequence()
+		if err != nil {
+			return err
+		}
+	}
+
+	gk, err := encode(key)
+
 	if err != nil {
 		return err
 	}

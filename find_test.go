@@ -824,7 +824,7 @@ func TestRecordOnIndexMatchFunc(t *testing.T) {
 func TestKeyStructTag(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		type KeyTest struct {
-			Key   int `boltholdKey`
+			Key   int `boltholdKey:"Key"`
 			Value string
 		}
 
@@ -855,7 +855,7 @@ func TestKeyStructTag(t *testing.T) {
 func TestKeyStructTagIntoPtr(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		type KeyTest struct {
-			Key   *int `boltholdKey`
+			Key   *int `boltholdKey:"Key"`
 			Value string
 		}
 

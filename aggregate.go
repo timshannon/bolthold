@@ -58,7 +58,6 @@ func (a *AggregateResult) Reduction(result interface{}) {
 	resultVal.Elem().Set(sliceVal.Slice(0, sliceVal.Len()))
 }
 
-//TODO: replace with 1.8 sort.Slice
 type aggregateResultSort AggregateResult
 
 func (a *aggregateResultSort) Len() int { return len(a.reduction) }
@@ -199,6 +198,4 @@ func tryFloat(val reflect.Value) float64 {
 	default:
 		panic(fmt.Sprintf("The field is of Kind %s and cannot be converted to a float64", val.Kind()))
 	}
-
-	return 0
 }

@@ -35,7 +35,7 @@ func TestInsert(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		// test duplicate insert
@@ -98,7 +98,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		update := &ItemTest{
@@ -120,7 +120,7 @@ func TestUpdate(t *testing.T) {
 		}
 
 		if !result.equal(update) {
-			t.Fatalf("Update didn't complete.  Expected %s, got %s", update, result)
+			t.Fatalf("Update didn't complete.  Expected %v, got %v", update, result)
 		}
 
 	})
@@ -168,7 +168,7 @@ func TestUpsert(t *testing.T) {
 		}
 
 		if !data.equal(result) {
-			t.Fatalf("Got %s wanted %s.", result, data)
+			t.Fatalf("Got %v wanted %v.", result, data)
 		}
 
 		update := &ItemTest{
@@ -190,7 +190,7 @@ func TestUpsert(t *testing.T) {
 		}
 
 		if !result.equal(update) {
-			t.Fatalf("Upsert didn't complete.  Expected %s, got %s", update, result)
+			t.Fatalf("Upsert didn't complete.  Expected %v, got %v", update, result)
 		}
 	})
 }
@@ -395,6 +395,37 @@ func TestIssue14UpdateMatching(t *testing.T) {
 
 		if len(result) != 0 {
 			t.Fatalf("Old index still exists after update.  Expected %d got %d!", 0, len(result))
+		}
+
+	})
+}
+
+func TestInsertSequence(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type SequenceTest struct {
+			Key uint `boltholdKey:"Key"`
+		}
+
+		for i := 0; i < 10; i++ {
+			err := store.Insert(bolthold.NextSequence(), &SequenceTest{})
+			if err != nil {
+				t.Fatalf("Error inserting data for sequence test: %s", err)
+			}
+		}
+
+		var result []SequenceTest
+
+		err := store.Find(&result, nil)
+		if err != nil {
+			t.Fatalf("Error getting data from bolthold: %s", err)
+		}
+
+		for i := 0; i < 10; i++ {
+			seq := i + 1
+			if seq != int(result[i].Key) {
+				t.Fatalf("Sequence is not correct.  Wanted %d, got %d", i, result[i].Key)
+			}
 		}
 
 	})

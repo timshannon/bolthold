@@ -31,7 +31,7 @@ func (i *ItemTest) Compare(other interface{}) (int, error) {
 		return 1, nil
 	}
 
-	return 0, &bolthold.ErrTypeMismatch{i, other}
+	return 0, &bolthold.ErrTypeMismatch{Value: i, Other: other}
 }
 
 func TestFindWithComparer(t *testing.T) {
