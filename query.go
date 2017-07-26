@@ -559,15 +559,8 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 
 		sort.Slice(records, func(i, j int) bool {
 			for _, field := range query.sort {
-				var value interface{}
-				var other interface{}
-				if query.dataType.Kind() == reflect.Ptr {
-					value = records[i].value.FieldByName(field).Interface()
-					other = records[j].value.FieldByName(field).Interface()
-				} else {
-					value = records[i].value.Elem().FieldByName(field).Interface()
-					other = records[j].value.Elem().FieldByName(field).Interface()
-				}
+				value := records[i].value.Elem().FieldByName(field).Interface()
+				other := records[j].value.Elem().FieldByName(field).Interface()
 
 				if query.reverse {
 					value, other = other, value

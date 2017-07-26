@@ -399,3 +399,34 @@ func TestIssue14UpdateMatching(t *testing.T) {
 
 	})
 }
+
+func TestInsertSequence(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type SequenceTest struct {
+			Key uint `boltholdKey:"Key"`
+		}
+
+		for i := 0; i < 10; i++ {
+			err := store.Insert(bolthold.NextSequence(), &SequenceTest{})
+			if err != nil {
+				t.Fatalf("Error inserting data for sequence test: %s", err)
+			}
+		}
+
+		var result []SequenceTest
+
+		err := store.Find(&result, nil)
+		if err != nil {
+			t.Fatalf("Error getting data from bolthold: %s", err)
+		}
+
+		for i := 0; i < 10; i++ {
+			seq := i + 1
+			if seq != int(result[i].Key) {
+				t.Fatalf("Sequence is not correct.  Wanted %d, got %d", i, result[i].Key)
+			}
+		}
+
+	})
+}

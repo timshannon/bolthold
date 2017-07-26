@@ -133,8 +133,16 @@ type Employee struct {
 	Hired time.Time
 }
 ```
-
 Bolthold assumes only one of such struct tags exists. If a value already exists in the key field, it will be overwritten.
+
+If you want to insert an auto-incrementing Key you can pass the `bolthold.NextSequence()` func as the Key value.
+
+```Go
+err := store.Insert(bolthold.NextSequence(), data)
+```
+
+The key value will be a `uint`.
+
 
 ### Aggregate Queries
 
