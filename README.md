@@ -40,8 +40,9 @@ Optionally, you can implement the `Storer` interface, to specify your own indexe
 struct tag.
 
 ## Queries
-Queries are chain-able constructs that filters out any data that doesn't match it's criteria. There will be no 
-"query optimiser". The first field listed in the query will be the index that the query starts at (if one exists).
+Queries are chain-able constructs that filters out any data that doesn't match it's criteria. An index will be used if
+the `.Index()` chain is called, otherwise bolthold will try all possible indexes simultaneously and return the data
+from the quickest query, and canceling the rest.
 
 Queries will look like this:
 ```Go
@@ -64,6 +65,7 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Limit - `Where("field").Eq(value).Limit(10)`
 * SortBy - `Where("field").Eq(value).SortBy("field1", "field2")`
 * Reverse - `Where("field").Eq(value).SortBy("field").Reverse()`
+* Index - `Where("field").Eq(value).Index("indexName")`
 
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
@@ -236,7 +238,7 @@ err = store.Insert("key", &Item{
 
 That's it!
 
-Bolthold is still very much alpha software at this point, but there is currently over 80% coverage in unit tests, and 
-it's backed by BoltDB which is a very solid and well built piece of software, so I encourage you to give it a try.
+Bolthold currently has over 80% coverage in unit tests, and it's backed by BoltDB which is a very solid and well built
+piece of software, so I encourage you to give it a try.
 
 If you end up using BoltHold, I'd love to hear about it.

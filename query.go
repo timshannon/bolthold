@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/boltdb/bolt"
@@ -98,7 +99,6 @@ func Where(field string) *Criterion {
 
 	return &Criterion{
 		query: &Query{
-			index:         field,
 			currentField:  field,
 			fieldCriteria: make(map[string][]*Criterion),
 		},
@@ -174,6 +174,12 @@ func (q *Query) SortBy(fields ...string) *Query {
 // useful with SortBy
 func (q *Query) Reverse() *Query {
 	q.reverse = !q.reverse
+	return q
+}
+
+// Index specifies the index to use when running this query
+func (q *Query) Index(indexName string) *Query {
+	q.index = indexName
 	return q
 }
 
@@ -519,8 +525,11 @@ type record struct {
 }
 
 func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
-	storer := newStorer(dataType)
+	if query.index == "" {
+		return runQueryIndexSelect(tx, dataType, query, action)
+	}
 
+	storer := newStorer(dataType)
 	tp := dataType
 
 	for reflect.TypeOf(tp).Kind() == reflect.Ptr {
@@ -530,87 +539,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	query.dataType = reflect.TypeOf(tp)
 
 	if len(query.sort) > 0 {
-		// Validate sort fields
-		for _, field := range query.sort {
-			_, found := query.dataType.FieldByName(field)
-			if !found {
-				return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
-			}
-		}
-
-		// Run query without sort, skip or limit
-		// apply sort, skip and limit to entire dataset
-		qCopy := *query
-		qCopy.sort = nil
-		qCopy.limit = 0
-		qCopy.skip = 0
-
-		var records []*record
-		err := runQuery(tx, dataType, &qCopy, nil, 0,
-			func(r *record) error {
-				records = append(records, r)
-
-				return nil
-			})
-
-		if err != nil {
-			return err
-		}
-
-		sort.Slice(records, func(i, j int) bool {
-			for _, field := range query.sort {
-				value := records[i].value.Elem().FieldByName(field).Interface()
-				other := records[j].value.Elem().FieldByName(field).Interface()
-
-				if query.reverse {
-					value, other = other, value
-				}
-
-				cmp, cerr := compare(value, other)
-				if cerr != nil {
-					// if for some reason there is an error on compare, fallback to a lexicographic compare
-					valS := fmt.Sprintf("%s", value)
-					otherS := fmt.Sprintf("%s", other)
-					if valS < otherS {
-						return true
-					} else if valS == otherS {
-						continue
-					}
-					return false
-				}
-
-				if cmp == -1 {
-					return true
-				} else if cmp == 0 {
-					continue
-				}
-				return false
-			}
-			return false
-		})
-
-		// apply skip and limit
-		limit := query.limit
-		skip := query.skip
-
-		if skip > len(records) {
-			records = records[0:0]
-		} else {
-			records = records[skip:]
-		}
-
-		if limit > 0 && limit <= len(records) {
-			records = records[:limit]
-		}
-
-		for i := range records {
-			err = action(records[i])
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return runQuerySort(tx, dataType, query, action)
 	}
 
 	iter := newIterator(tx, storer.Type(), query)
@@ -687,6 +616,147 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+// runQuerySort runs the query without sort, skip, or limit, then applies them to the entire result set
+func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
+	// Validate sort fields
+	for _, field := range query.sort {
+		_, found := query.dataType.FieldByName(field)
+		if !found {
+			return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
+		}
+	}
+
+	// Run query without sort, skip or limit
+	// apply sort, skip and limit to entire dataset
+	qCopy := *query
+	qCopy.sort = nil
+	qCopy.limit = 0
+	qCopy.skip = 0
+
+	var records []*record
+	err := runQuery(tx, dataType, &qCopy, nil, 0,
+		func(r *record) error {
+			records = append(records, r)
+
+			return nil
+		})
+
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		for _, field := range query.sort {
+			value := records[i].value.Elem().FieldByName(field).Interface()
+			other := records[j].value.Elem().FieldByName(field).Interface()
+
+			if query.reverse {
+				value, other = other, value
+			}
+
+			cmp, cerr := compare(value, other)
+			if cerr != nil {
+				// if for some reason there is an error on compare, fallback to a lexicographic compare
+				valS := fmt.Sprintf("%s", value)
+				otherS := fmt.Sprintf("%s", other)
+				if valS < otherS {
+					return true
+				} else if valS == otherS {
+					continue
+				}
+				return false
+			}
+
+			if cmp == -1 {
+				return true
+			} else if cmp == 0 {
+				continue
+			}
+			return false
+		}
+		return false
+	})
+
+	// apply skip and limit
+	limit := query.limit
+	skip := query.skip
+
+	if skip > len(records) {
+		records = records[0:0]
+	} else {
+		records = records[skip:]
+	}
+
+	if limit > 0 && limit <= len(records) {
+		records = records[:limit]
+	}
+
+	for i := range records {
+		err = action(records[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+// runQueryIndexSelect selects the fastest index by running the query against all defined indexes and using
+// the one that returns first
+func runQueryIndexSelect(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
+	indexes := newStorer(dataType).Indexes()
+
+	var once sync.Once
+	var err error
+
+	var records []*record
+
+	done := make(chan error)
+	for indexName := range indexes {
+		go func(index string) {
+			qCopy := *query
+			qCopy.index = index
+
+			var indexRecords []*record
+
+			err := runQuery(tx, dataType, &qCopy, nil, 0,
+				func(r *record) error {
+					records = append(records, r)
+
+					return nil
+				})
+
+			if err != nil {
+				done <- err
+				return
+			}
+
+			once.Do(func() {
+				records = indexRecords
+			})
+			done <- nil
+		}(indexName)
+		rErr := <-done
+		if rErr != nil {
+			err = rErr
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	for i := range records {
+		err = action(records[i])
+		if err != nil {
+			return err
 		}
 	}
 

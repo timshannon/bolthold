@@ -206,7 +206,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		return iter
 	}
 
-	iBucket := findIndexBucket(tx, typeName, query)
+	iBucket := tx.Bucket(indexBucketName(typeName, query.index))
 
 	if iBucket == nil {
 		// bad index, filter through entire store
@@ -298,27 +298,6 @@ func seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) 
 	}
 
 	return cursor.First()
-}
-
-// findIndexBucket returns the index bucket from the query, and if not found, tries to find the next available index
-func findIndexBucket(tx *bolt.Tx, typeName string, query *Query) *bolt.Bucket {
-	iBucket := tx.Bucket(indexBucketName(typeName, query.index))
-	if iBucket != nil {
-		return iBucket
-	}
-
-	for field := range query.fieldCriteria {
-		if field == query.index {
-			continue
-		}
-
-		iBucket = tx.Bucket(indexBucketName(typeName, field))
-		if iBucket != nil {
-			query.index = field
-			return iBucket
-		}
-	}
-	return nil
 }
 
 // Next returns the next key value that matches the iterators criteria
