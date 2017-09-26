@@ -453,6 +453,11 @@ var tests = []test{
 		query:  bolthold.Where("Category").In("animal", "vehicle"),
 		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
 	},
+	test{
+		name:   "Equal Field With Specific Index",
+		query:  bolthold.Where("Category").Eq("vehicle").Index("Category"),
+		result: []int{0, 1, 3, 6, 11},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -577,6 +582,19 @@ func TestFindOnInvalidFieldName(t *testing.T) {
 		err := store.Find(&result, bolthold.Where("BadFieldName").Eq("test"))
 		if err == nil {
 			t.Fatalf("Find query against a bad field name didn't return an error!")
+		}
+
+	})
+}
+
+func TestFindOnInvalidIndex(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+
+		err := store.Find(&result, bolthold.Where("Name").Eq("test").Index("BadIndex"))
+		if err == nil {
+			t.Fatalf("Find query against a bad index name didn't return an error!")
 		}
 
 	})

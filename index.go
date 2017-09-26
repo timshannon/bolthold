@@ -206,7 +206,10 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		return iter
 	}
 
-	iBucket := tx.Bucket(indexBucketName(typeName, query.index))
+	var iBucket *bolt.Bucket
+	if !query.badIndex {
+		iBucket = tx.Bucket(indexBucketName(typeName, query.index))
+	}
 
 	if iBucket == nil {
 		// bad index, filter through entire store
