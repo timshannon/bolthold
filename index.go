@@ -6,6 +6,7 @@ package bolthold
 
 import (
 	"bytes"
+	"reflect"
 	"sort"
 
 	"github.com/boltdb/bolt"
@@ -171,10 +172,11 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		return iter
 	}
 
+	criteria := query.fieldCriteria[query.index]
+
 	//   Key field
-	if query.index == Key {
+	if query.index == Key && !query.badIndex {
 		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
-		criteria := query.fieldCriteria[Key]
 
 		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
 			var nKeys [][]byte
@@ -191,7 +193,14 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 					return nKeys, nil
 				}
 
-				ok, err := matchesAllCriteria(criteria, k, true)
+				val := reflect.New(query.dataType)
+				v := iter.dataBucket.Get(k)
+				err := decode(v, val.Interface())
+				if err != nil {
+					return nil, err
+				}
+
+				ok, err := matchesAllCriteria(criteria, k, true, val.Interface())
 				if err != nil {
 					return nil, err
 				}
@@ -211,8 +220,8 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		iBucket = tx.Bucket(indexBucketName(typeName, query.index))
 	}
 
-	if iBucket == nil {
-		// bad index, filter through entire store
+	if iBucket == nil || hasMatchFunc(criteria) {
+		// bad index or matches Function on indexed field, filter through entire store
 		query.badIndex = true
 
 		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
@@ -245,7 +254,6 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
 		var nKeys [][]byte
-		criteria := query.fieldCriteria[query.index]
 
 		for len(nKeys) < iteratorKeyMinCacheSize {
 			var k, v []byte
@@ -258,7 +266,9 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			if k == nil {
 				return nKeys, nil
 			}
-			ok, err := matchesAllCriteria(criteria, k, true)
+
+			// no currentRow on indexes as it refers to multiple rows
+			ok, err := matchesAllCriteria(criteria, k, true, nil)
 			if err != nil {
 				return nil, err
 			}

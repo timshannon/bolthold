@@ -433,6 +433,19 @@ var tests = []test{
 		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
 	test{
+		name: "Issue #8 - Function Field on a specific index",
+		query: bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
+			_, ok := field.(string)
+			if !ok {
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+			}
+
+			return !strings.HasPrefix(field.(string), "veh"), nil
+		}).Index("Category"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
+	test{
 		name: "Find item with max ID in each category - sub aggregate query",
 		query: bolthold.Where("ID").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			grp, err := ra.SubAggregateQuery(bolthold.Where("Category").
