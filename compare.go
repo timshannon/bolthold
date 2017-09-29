@@ -31,7 +31,7 @@ type Comparer interface {
 	Compare(other interface{}) (int, error)
 }
 
-func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
+func (c *Criterion) compare(rowValue, criterionValue interface{}, currentRow interface{}) (int, error) {
 	if rowValue == nil || criterionValue == nil {
 		if rowValue == criterionValue {
 			return 0, nil
@@ -40,10 +40,10 @@ func (c *Criterion) compare(rowValue, criterionValue interface{}) (int, error) {
 	}
 
 	if _, ok := criterionValue.(Field); ok {
-		fVal := reflect.ValueOf(c.query.currentRow).Elem().FieldByName(string(criterionValue.(Field)))
+		fVal := reflect.ValueOf(currentRow).Elem().FieldByName(string(criterionValue.(Field)))
 		if !fVal.IsValid() {
 			return 0, fmt.Errorf("The field %s does not exist in the type %s", criterionValue,
-				reflect.TypeOf(c.query.currentRow))
+				reflect.TypeOf(currentRow))
 		}
 
 		criterionValue = fVal.Interface()

@@ -283,6 +283,16 @@ var tests = []test{
 		result: []int{6, 7, 4, 13, 3},
 	},
 	test{
+		name:   "In on data from other index",
+		query:  bolthold.Where("ID").In(5, 8, 3).Index("Category"),
+		result: []int{6, 7, 4, 13, 3},
+	},
+	test{
+		name:   "In on index",
+		query:  bolthold.Where("Category").In("food", "animal").Index("Category"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
+	test{
 		name:   "Regular Expression",
 		query:  bolthold.Where("Name").RegExp(regexp.MustCompile("ea")),
 		result: []int{2, 9, 12},
@@ -433,6 +443,19 @@ var tests = []test{
 		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
 	test{
+		name: "Issue #8 - Function Field on a specific index",
+		query: bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
+			field := ra.Field()
+			_, ok := field.(string)
+			if !ok {
+				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+			}
+
+			return !strings.HasPrefix(field.(string), "veh"), nil
+		}).Index("Category"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
+	test{
 		name: "Find item with max ID in each category - sub aggregate query",
 		query: bolthold.Where("ID").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			grp, err := ra.SubAggregateQuery(bolthold.Where("Category").
@@ -452,6 +475,21 @@ var tests = []test{
 		name:   "Indexed in",
 		query:  bolthold.Where("Category").In("animal", "vehicle"),
 		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
+	},
+	test{
+		name:   "Equal Field With Specific Index",
+		query:  bolthold.Where("Category").Eq("vehicle").Index("Category"),
+		result: []int{0, 1, 3, 6, 11},
+	},
+	test{
+		name:   "Key test after lead field",
+		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key).Gt(testData[10].Key),
+		result: []int{12, 15},
+	},
+	test{
+		name:   "Key test after lead index",
+		query:  bolthold.Where("Category").Eq("food").Index("Category").And(bolthold.Key).Gt(testData[10].Key),
+		result: []int{12, 15},
 	},
 }
 
@@ -582,11 +620,24 @@ func TestFindOnInvalidFieldName(t *testing.T) {
 	})
 }
 
+func TestFindOnInvalidIndex(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+
+		err := store.Find(&result, bolthold.Where("Name").Eq("test").Index("BadIndex"))
+		if err == nil {
+			t.Fatalf("Find query against a bad index name didn't return an error!")
+		}
+
+	})
+}
+
 func TestQueryStringPrint(t *testing.T) {
 	q := bolthold.Where("FirstField").Eq("first value").And("SecondField").Gt("Second Value").And("ThirdField").
 		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").
 		Ne("Sixth Value").Or(bolthold.Where("FirstField").In("val1", "val2", "val3").And("SecondField").IsNil().
-		And("ThirdField").RegExp(regexp.MustCompile("test")).And("FirstField").
+		And("ThirdField").RegExp(regexp.MustCompile("test")).Index("IndexName").And("FirstField").
 		MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			return true, nil
 		}))
@@ -602,6 +653,7 @@ func TestQueryStringPrint(t *testing.T) {
 		"FirstField matches the function",
 		"SecondField is nil",
 		"ThirdField matches the regular expression test",
+		"Using Index [IndexName]",
 	}
 
 	// map order isn't guaranteed, check if all needed lines exist
@@ -799,24 +851,6 @@ func TestKeyMatchFunc(t *testing.T) {
 			}
 
 			return strings.HasPrefix(field.(string), "oat"), nil
-		}))
-	})
-}
-
-func TestRecordOnIndexMatchFunc(t *testing.T) {
-	testWrap(t, func(store *bolthold.Store, t *testing.T) {
-		insertTestData(t, store)
-
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatalf("Running matchFunc against an Index did not panic when trying to access the Record!")
-			}
-		}()
-
-		var result []ItemTest
-		_ = store.Find(&result, bolthold.Where("Category").MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
-			ra.Record()
-			return false, nil
 		}))
 	})
 }

@@ -43,10 +43,9 @@ type Query struct {
 	fieldCriteria map[string][]*Criterion
 	ors           []*Query
 
-	badIndex   bool
-	currentRow interface{}
-	dataType   reflect.Type
-	tx         *bolt.Tx
+	badIndex bool
+	dataType reflect.Type
+	tx       *bolt.Tx
 
 	limit   int
 	skip    int
@@ -79,6 +78,15 @@ type Criterion struct {
 	inValues []interface{}
 }
 
+func hasMatchFunc(criteria []*Criterion) bool {
+	for _, c := range criteria {
+		if c.operator == fn {
+			return true
+		}
+	}
+	return false
+}
+
 // Field allows for referencing a field in structure being compared
 type Field string
 
@@ -98,7 +106,6 @@ func Where(field string) *Criterion {
 
 	return &Criterion{
 		query: &Query{
-			index:         field,
 			currentField:  field,
 			fieldCriteria: make(map[string][]*Criterion),
 		},
@@ -177,6 +184,12 @@ func (q *Query) Reverse() *Query {
 	return q
 }
 
+// Index specifies the index to use when running this query
+func (q *Query) Index(indexName string) *Query {
+	q.index = indexName
+	return q
+}
+
 // Or creates another separate query that gets unioned with any other results in the query
 // Or will panic if the query passed in contains a limit or skip value, as they are only
 // allowed on top level queries
@@ -188,7 +201,7 @@ func (q *Query) Or(query *Query) *Query {
 	return q
 }
 
-func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) {
+func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow interface{}) (bool, error) {
 	if q.IsEmpty() {
 		return true, nil
 	}
@@ -200,7 +213,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) 
 		}
 
 		if field == Key {
-			ok, err := matchesAllCriteria(criteria, key, true)
+			ok, err := matchesAllCriteria(criteria, key, true, currentRow)
 			if err != nil {
 				return false, err
 			}
@@ -217,7 +230,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value) (bool, error) 
 			return false, fmt.Errorf("The field %s does not exist in the type %s", field, value)
 		}
 
-		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false)
+		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false, currentRow)
 		if err != nil {
 			return false, err
 		}
@@ -309,10 +322,6 @@ func (r *RecordAccess) Field() interface{} {
 
 // Record is the complete record for a given row in bolthold
 func (r *RecordAccess) Record() interface{} {
-	if r.record == nil {
-		// I don't like this, but it's better than not having access to Record for all other query types
-		panic("Current Record doesn't exists, because this criteria was executed on an index")
-	}
 	return r.record
 }
 
@@ -338,30 +347,11 @@ func (c *Criterion) MatchFunc(match MatchFunc) *Query {
 }
 
 // test if the criterion passes with the passed in value
-func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
+func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interface{}) (bool, error) {
 	var value interface{}
 	if encoded {
 		if len(testValue.([]byte)) != 0 {
-			if c.operator == fn {
-				// with matchFunc, their is no value type to assume a type from, so we need to get it
-				// from the current field being tested
-				// This is not possible with Keys, so defining a matchFunc query on a Key panics
-
-				fieldType, ok := c.query.dataType.FieldByName(c.query.index)
-				if !ok {
-					return false, fmt.Errorf("current row does not contain the field %s which has been indexed",
-						c.query.index)
-				}
-				value = reflect.New(fieldType.Type).Interface()
-				err := decode(testValue.([]byte), value)
-				if err != nil {
-					return false, err
-				}
-
-				// in order to decode, we needed a pointer, but matchFunc is expecting the original
-				// type, so we need to get an interface of the actual element, not the pointer
-				value = reflect.ValueOf(value).Elem().Interface()
-			} else if c.operator == in {
+			if c.operator == in {
 				// value is a slice of values, use c.inValues
 				value = reflect.New(reflect.TypeOf(c.inValues[0])).Interface()
 				err := decode(testValue.([]byte), value)
@@ -387,7 +377,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	switch c.operator {
 	case in:
 		for i := range c.inValues {
-			result, err := c.compare(value, c.inValues[i])
+			result, err := c.compare(value, c.inValues[i], currentRow)
 			if err != nil {
 				return false, err
 			}
@@ -402,14 +392,14 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	case fn:
 		return c.value.(MatchFunc)(&RecordAccess{
 			field:  value,
-			record: c.query.currentRow,
+			record: currentRow,
 			tx:     c.query.tx,
 		})
 	case isnil:
 		return reflect.ValueOf(value).IsNil(), nil
 	default:
 		//comparison operators
-		result, err := c.compare(value, c.value)
+		result, err := c.compare(value, c.value, currentRow)
 		if err != nil {
 			return false, err
 		}
@@ -433,9 +423,9 @@ func (c *Criterion) test(testValue interface{}, encoded bool) (bool, error) {
 	}
 }
 
-func matchesAllCriteria(criteria []*Criterion, value interface{}, encoded bool) (bool, error) {
+func matchesAllCriteria(criteria []*Criterion, value interface{}, encoded bool, currentRow interface{}) (bool, error) {
 	for i := range criteria {
-		ok, err := criteria[i].test(value, encoded)
+		ok, err := criteria[i].test(value, encoded, currentRow)
 		if err != nil {
 			return false, err
 		}
@@ -520,6 +510,9 @@ type record struct {
 
 func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
 	storer := newStorer(dataType)
+	if query.index != "" && tx.Bucket(indexBucketName(storer.Type(), query.index)) == nil {
+		return fmt.Errorf("The index %s does not exist", query.index)
+	}
 
 	tp := dataType
 
@@ -530,87 +523,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	query.dataType = reflect.TypeOf(tp)
 
 	if len(query.sort) > 0 {
-		// Validate sort fields
-		for _, field := range query.sort {
-			_, found := query.dataType.FieldByName(field)
-			if !found {
-				return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
-			}
-		}
-
-		// Run query without sort, skip or limit
-		// apply sort, skip and limit to entire dataset
-		qCopy := *query
-		qCopy.sort = nil
-		qCopy.limit = 0
-		qCopy.skip = 0
-
-		var records []*record
-		err := runQuery(tx, dataType, &qCopy, nil, 0,
-			func(r *record) error {
-				records = append(records, r)
-
-				return nil
-			})
-
-		if err != nil {
-			return err
-		}
-
-		sort.Slice(records, func(i, j int) bool {
-			for _, field := range query.sort {
-				value := records[i].value.Elem().FieldByName(field).Interface()
-				other := records[j].value.Elem().FieldByName(field).Interface()
-
-				if query.reverse {
-					value, other = other, value
-				}
-
-				cmp, cerr := compare(value, other)
-				if cerr != nil {
-					// if for some reason there is an error on compare, fallback to a lexicographic compare
-					valS := fmt.Sprintf("%s", value)
-					otherS := fmt.Sprintf("%s", other)
-					if valS < otherS {
-						return true
-					} else if valS == otherS {
-						continue
-					}
-					return false
-				}
-
-				if cmp == -1 {
-					return true
-				} else if cmp == 0 {
-					continue
-				}
-				return false
-			}
-			return false
-		})
-
-		// apply skip and limit
-		limit := query.limit
-		skip := query.skip
-
-		if skip > len(records) {
-			records = records[0:0]
-		} else {
-			records = records[skip:]
-		}
-
-		if limit > 0 && limit <= len(records) {
-			records = records[:limit]
-		}
-
-		for i := range records {
-			err = action(records[i])
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		return runQuerySort(tx, dataType, query, action)
 	}
 
 	iter := newIterator(tx, storer.Type(), query)
@@ -634,10 +547,9 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 			return err
 		}
 
-		query.currentRow = val.Interface()
 		query.tx = tx
 
-		ok, err := query.matchesAllFields(k, val)
+		ok, err := query.matchesAllFields(k, val, val.Interface())
 		if err != nil {
 			return err
 		}
@@ -691,6 +603,92 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 	}
 
 	return nil
+}
+
+// runQuerySort runs the query without sort, skip, or limit, then applies them to the entire result set
+func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
+	// Validate sort fields
+	for _, field := range query.sort {
+		_, found := query.dataType.FieldByName(field)
+		if !found {
+			return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
+		}
+	}
+
+	// Run query without sort, skip or limit
+	// apply sort, skip and limit to entire dataset
+	qCopy := *query
+	qCopy.sort = nil
+	qCopy.limit = 0
+	qCopy.skip = 0
+
+	var records []*record
+	err := runQuery(tx, dataType, &qCopy, nil, 0,
+		func(r *record) error {
+			records = append(records, r)
+
+			return nil
+		})
+
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(records, func(i, j int) bool {
+		for _, field := range query.sort {
+			value := records[i].value.Elem().FieldByName(field).Interface()
+			other := records[j].value.Elem().FieldByName(field).Interface()
+
+			if query.reverse {
+				value, other = other, value
+			}
+
+			cmp, cerr := compare(value, other)
+			if cerr != nil {
+				// if for some reason there is an error on compare, fallback to a lexicographic compare
+				valS := fmt.Sprintf("%s", value)
+				otherS := fmt.Sprintf("%s", other)
+				if valS < otherS {
+					return true
+				} else if valS == otherS {
+					continue
+				}
+				return false
+			}
+
+			if cmp == -1 {
+				return true
+			} else if cmp == 0 {
+				continue
+			}
+			return false
+		}
+		return false
+	})
+
+	// apply skip and limit
+	limit := query.limit
+	skip := query.skip
+
+	if skip > len(records) {
+		records = records[0:0]
+	} else {
+		records = records[skip:]
+	}
+
+	if limit > 0 && limit <= len(records) {
+		records = records[:limit]
+	}
+
+	for i := range records {
+		err = action(records[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+
 }
 
 func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
