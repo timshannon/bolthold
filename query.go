@@ -322,10 +322,6 @@ func (r *RecordAccess) Field() interface{} {
 
 // Record is the complete record for a given row in bolthold
 func (r *RecordAccess) Record() interface{} {
-	if r.record == nil {
-		// I don't like this, but it's better than not having access to Record for all other query types
-		panic("Current Record doesn't exists, because this criteria was executed on an index that refers to multiple records")
-	}
 	return r.record
 }
 
@@ -355,26 +351,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interfa
 	var value interface{}
 	if encoded {
 		if len(testValue.([]byte)) != 0 {
-			if c.operator == fn {
-				// with matchFunc, their is no value type to assume a type from, so we need to get it
-				// from the current field being tested
-				// This is not possible with Keys, so defining a matchFunc query on a Key panics
-
-				fieldType, ok := c.query.dataType.FieldByName(c.query.index)
-				if !ok {
-					return false, fmt.Errorf("current row does not contain the field %s which has been indexed",
-						c.query.index)
-				}
-				value = reflect.New(fieldType.Type).Interface()
-				err := decode(testValue.([]byte), value)
-				if err != nil {
-					return false, err
-				}
-
-				// in order to decode, we needed a pointer, but matchFunc is expecting the original
-				// type, so we need to get an interface of the actual element, not the pointer
-				value = reflect.ValueOf(value).Elem().Interface()
-			} else if c.operator == in {
+			if c.operator == in {
 				// value is a slice of values, use c.inValues
 				value = reflect.New(reflect.TypeOf(c.inValues[0])).Interface()
 				err := decode(testValue.([]byte), value)

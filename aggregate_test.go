@@ -475,3 +475,47 @@ func TestFindAggregateBadSumFieldPanic(t *testing.T) {
 		result[0].Sum("BadField")
 	})
 }
+
+func TestFindAggregateBadGroupField(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		_, err := store.FindAggregate(&ItemTest{}, nil, "BadField")
+		if err == nil {
+			t.Fatalf("FindAggregate didn't fail when grouped by a bad field.")
+		}
+
+	})
+}
+
+func TestFindAggregateWithNoResult(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		result, err := store.FindAggregate(&ItemTest{}, bolthold.Where("Name").Eq("Never going to match on this"), "Category")
+		if err != nil {
+			t.Fatalf("FindAggregate failed when the query produced no results")
+		}
+
+		if len(result) != 0 {
+			t.Fatalf("Incorrect result.  Wanted 0 got %d", len(result))
+		}
+
+	})
+}
+
+func TestFindAggregateWithNoGroupBy(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+
+		result, err := store.FindAggregate(&ItemTest{}, nil)
+		if err != nil {
+			t.Fatalf("FindAggregate failed when there was no groupBy ")
+		}
+
+		if len(result) != 1 {
+			t.Fatalf("Incorrect result.  Wanted 1 got %d", len(result))
+		}
+
+	})
+}

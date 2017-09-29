@@ -283,6 +283,16 @@ var tests = []test{
 		result: []int{6, 7, 4, 13, 3},
 	},
 	test{
+		name:   "In on data from other index",
+		query:  bolthold.Where("ID").In(5, 8, 3).Index("Category"),
+		result: []int{6, 7, 4, 13, 3},
+	},
+	test{
+		name:   "In on index",
+		query:  bolthold.Where("Category").In("food", "animal").Index("Category"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
+	test{
 		name:   "Regular Expression",
 		query:  bolthold.Where("Name").RegExp(regexp.MustCompile("ea")),
 		result: []int{2, 9, 12},
@@ -471,6 +481,16 @@ var tests = []test{
 		query:  bolthold.Where("Category").Eq("vehicle").Index("Category"),
 		result: []int{0, 1, 3, 6, 11},
 	},
+	test{
+		name:   "Key test after lead field",
+		query:  bolthold.Where("Category").Eq("food").And(bolthold.Key).Gt(testData[10].Key),
+		result: []int{12, 15},
+	},
+	test{
+		name:   "Key test after lead index",
+		query:  bolthold.Where("Category").Eq("food").Index("Category").And(bolthold.Key).Gt(testData[10].Key),
+		result: []int{12, 15},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -617,7 +637,7 @@ func TestQueryStringPrint(t *testing.T) {
 	q := bolthold.Where("FirstField").Eq("first value").And("SecondField").Gt("Second Value").And("ThirdField").
 		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").
 		Ne("Sixth Value").Or(bolthold.Where("FirstField").In("val1", "val2", "val3").And("SecondField").IsNil().
-		And("ThirdField").RegExp(regexp.MustCompile("test")).And("FirstField").
+		And("ThirdField").RegExp(regexp.MustCompile("test")).Index("IndexName").And("FirstField").
 		MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			return true, nil
 		}))
@@ -633,6 +653,7 @@ func TestQueryStringPrint(t *testing.T) {
 		"FirstField matches the function",
 		"SecondField is nil",
 		"ThirdField matches the regular expression test",
+		"Using Index [IndexName]",
 	}
 
 	// map order isn't guaranteed, check if all needed lines exist
