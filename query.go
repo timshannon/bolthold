@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"unicode"
 
 	"github.com/boltdb/bolt"
@@ -533,10 +532,6 @@ type record struct {
 }
 
 func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
-	if query.index == "" && !query.badIndex {
-		return runQueryIndexSelect(tx, dataType, query, action)
-	}
-
 	storer := newStorer(dataType)
 	if query.index != "" && tx.Bucket(indexBucketName(storer.Type(), query.index)) == nil {
 		return fmt.Errorf("The index %s does not exist", query.index)
@@ -717,79 +712,6 @@ func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r
 
 	return nil
 
-}
-
-// runQueryIndexSelect selects the fastest index by running the query against all defined indexes and using
-// the one that returns first
-func runQueryIndexSelect(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
-	indexes := newStorer(dataType).Indexes()
-
-	// find overlap between query fields and indexes
-	var found []string
-	for indexName := range indexes {
-		for field := range query.fieldCriteria {
-			if field == indexName {
-				found = append(found, indexName)
-			}
-		}
-	}
-
-	if len(found) == 0 {
-		// no indexes overlap with selected fields, force iterator to scan the entire dataset
-		found = append(found, "")
-		query.badIndex = true
-	}
-
-	var once sync.Once
-	var err error
-
-	var records []*record
-
-	done := make(chan error)
-	for _, indexName := range found {
-		go func(index string) {
-			qCopy := *query
-			qCopy.index = index
-
-			var indexRecords []*record
-
-			err := runQuery(tx, dataType, &qCopy, nil, 0,
-				func(r *record) error {
-					indexRecords = append(indexRecords, r)
-
-					return nil
-				})
-
-			if err != nil {
-				done <- err
-				return
-			}
-
-			once.Do(func() {
-				records = indexRecords
-			})
-			done <- nil
-		}(indexName)
-		rErr := <-done
-		if rErr != nil {
-			err = rErr
-		}
-	}
-
-	close(done)
-
-	if err != nil {
-		return err
-	}
-
-	for i := range records {
-		err = action(records[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {

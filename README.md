@@ -41,8 +41,7 @@ struct tag.
 
 ## Queries
 Queries are chain-able constructs that filters out any data that doesn't match it's criteria. An index will be used if
-the `.Index()` chain is called, otherwise bolthold will try all possible indexes simultaneously and return the data
-from the quickest query, and canceling the rest.
+the `.Index()` chain is called, otherwise bolthold won't use any index.
 
 Queries will look like this:
 ```Go
