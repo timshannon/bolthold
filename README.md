@@ -125,6 +125,11 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 A common scenario is to store the bolthold Key in the same struct that is stored in the boltDB value.  You can
 automatically populate a record's Key in a struct by using the `boltholdKey` struct tag when running `Find` queries.
 
+Another common scenario is to insert data with an auto-incrementing key assigned by the database.
+When performing an `Insert`, if the type of the key matches the type of the `boltholdKey` tagged field,
+the data is passed in by reference, **and** the field's current value is the zero-value for that type,
+then it is set on the data _before_ insertion.
+
 ```Go
 type Employee struct {
 	ID string `boltholdKey:"ID"`  // the tagName isn't required, but some linters will complain without it
@@ -143,6 +148,13 @@ err := store.Insert(bolthold.NextSequence(), data)
 ```
 
 The key value will be a `uint64`.
+
+If you want to know the value of the auto-incrementing Key that was generated using `bolthold.NextSequence()`,
+then make sure to pass your data by value and that the `boltholdKey` tagged field is of type `uint64`.
+
+```Go
+err := store.Insert(bolthold.NextSequence(), &data)
+```
 
 
 ### Aggregate Queries

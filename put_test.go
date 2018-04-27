@@ -430,3 +430,91 @@ func TestInsertSequence(t *testing.T) {
 
 	})
 }
+
+func TestInsertSequenceSetKey(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		// Properly tagged, passed by reference, and the field is the same type
+		// as bucket.NextSequence() produces
+		type InsertSequenceSetKeyTest struct {
+			// bolthold.NextSequence() creates an auto-key that is a uint64
+			Key uint64 `boltholdKey:"Key"`
+		}
+
+		for i := 0; i < 10; i++ {
+			seq := i + 1
+			st := InsertSequenceSetKeyTest{}
+			if st.Key != 0 {
+				t.Fatalf("Zero value of test data should be 0")
+			}
+			err := store.Insert(bolthold.NextSequence(), &st)
+			if err != nil {
+				t.Fatalf("Error inserting data for sequence test: %s", err)
+			}
+			if int(st.Key) != seq {
+				t.Fatalf("Inserted data's key field was not updated as expected.  Wanted %d, got %d", seq, st.Key)
+			}
+		}
+	})
+}
+
+func TestInsertSetKey(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type TestInsertSetKey struct {
+			Key uint `boltholdKey:"Key"`
+		}
+
+		t.Run("Valid", func(t *testing.T) {
+			st := TestInsertSetKey{}
+			key := uint(123)
+			err := store.Insert(key, &st)
+			if err != nil {
+				t.Fatalf("Error inserting data for key set test: %s", err)
+			}
+			if st.Key != key {
+				t.Fatalf("Key was not set.  Wanted %d, got %d", key, st.Key)
+			}
+		})
+
+		// same as "Valid", but passed by value instead of reference
+		t.Run("NotSettable", func(t *testing.T) {
+			st := TestInsertSetKey{}
+			key := uint(234)
+			err := store.Insert(key, st)
+			if err != nil {
+				t.Fatalf("Error inserting data for key set test: %s", err)
+			}
+			if st.Key != 0 {
+				t.Fatalf("Key was set incorrectly.  Wanted %d, got %d", 0, st.Key)
+			}
+		})
+
+		t.Run("NonZero", func(t *testing.T) {
+			key := uint(456)
+			st := TestInsertSetKey{424242}
+			err := store.Insert(key, &st)
+			if err != nil {
+				t.Fatalf("Error inserting data for key set test: %s", err)
+			}
+			if st.Key != 424242 {
+				t.Fatalf("Key was set incorrectly.  Wanted %d, got %d", 424242, st.Key)
+			}
+		})
+
+		t.Run("TypeMismatch", func(t *testing.T) {
+			key := int(789)
+			st := TestInsertSetKey{}
+			err := store.Insert(key, &st)
+			if err != nil {
+				t.Fatalf("Error inserting data for key set test: %s", err)
+			}
+			// The fact that we can't even compare them is a pretty good sign
+			// that we can't set the key when the types don't match
+			if st.Key != 0 {
+				t.Fatalf("Key was not set.  Wanted %d, got %d", 0, st.Key)
+			}
+		})
+
+	})
+}
