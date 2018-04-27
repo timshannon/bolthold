@@ -404,7 +404,7 @@ func TestInsertSequence(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 
 		type SequenceTest struct {
-			Key uint `boltholdKey:"Key"`
+			Key uint64 `boltholdKey:"Key"`
 		}
 
 		for i := 0; i < 10; i++ {

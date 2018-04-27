@@ -142,7 +142,7 @@ If you want to insert an auto-incrementing Key you can pass the `bolthold.NextSe
 err := store.Insert(bolthold.NextSequence(), data)
 ```
 
-The key value will be a `uint`.
+The key value will be a `uint64`.
 
 
 ### Aggregate Queries
