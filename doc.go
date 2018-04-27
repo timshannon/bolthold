@@ -21,7 +21,7 @@ different types into the same DB file and they (and their indexes) will be store
 
 Indexes
 
-BoltHold will automatically create an index for any struct fields tags with "boldholdIndex"
+BoltHold will automatically create an index for any struct fields tags with "boltholdIndex"
 
 	type Item struct {
 		ID       int

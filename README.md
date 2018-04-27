@@ -1,11 +1,11 @@
-# BoldHold 
+# BoltHold
 [![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
 
 
 BoltHold is a simple querying and indexing layer on top of a Bolt DB instance. The goal is to create a simple,
-higher level interface on top of Bolt DB that simplifies dealing with Go Types and finding data, but exposes the underlying 
-Bolt DB for customizing as you wish.  By default the encoding used is Gob, so feel free to use the GobEncoder/Decoder 
-interface for faster serialization.  Or, alternately, you can use any serialization you want by supplying encode / decode 
+higher level interface on top of Bolt DB that simplifies dealing with Go Types and finding data, but exposes the underlying
+Bolt DB for customizing as you wish.  By default the encoding used is Gob, so feel free to use the GobEncoder/Decoder
+interface for faster serialization.  Or, alternately, you can use any serialization you want by supplying encode / decode
 funcs to the `Options` struct on Open.
 
 One Go Type will have one bucket, and multiple index buckets in a BoltDB file, so you can store multiple Go Types in the
@@ -13,7 +13,7 @@ same database.
 
 ## Why not just use Bolt DB directly?
 I love BoltDB, and I've used it in several projects.  However, I find myself writing the same code over and over again,
-for encoding and decoding objects and searching through data.  I figure formalizing how I've been using BoltDB 
+for encoding and decoding objects and searching through data.  I figure formalizing how I've been using BoltDB
 and including tests and benchmarks will, at a minimum, be useful to me.  Maybe it'll be useful to others as well.
 
 ## Indexes
@@ -22,7 +22,7 @@ Indexes allow you to skip checking any records that don't meet your index criter
 your query criteria if you create an index on the Division field.  The downside of an index is added disk reads and writes
 on every write operation.  For read heavy operations datasets, indexes can be very useful.
 
-In every BoltHold store, there will be a reserved bucket *_indexes* which will be used to hold indexes that point back 
+In every BoltHold store, there will be a reserved bucket *_indexes* which will be used to hold indexes that point back
 to another bucket's Key system.  Indexes will be defined by setting the `boltholdIndex` struct tag on a field in a type.
 
 ```Go
@@ -36,7 +36,7 @@ type Person struct {
 This means that there will be an index created for `Division` that will contain the set of unique divisions, and the
 main record keys they refer to.
 
-Optionally, you can implement the `Storer` interface, to specify your own indexes, rather than using the `boltHoldIndex` 
+Optionally, you can implement the `Storer` interface, to specify your own indexes, rather than using the `boltHoldIndex`
 struct tag.
 
 ## Queries
@@ -86,7 +86,7 @@ type Person struct {
 
 ```
 
-If you wanted to find any invalid records where a Person's death was before their birth, you could do the following: 
+If you wanted to find any invalid records where a Person's death was before their birth, you could do the following:
 
 ```Go
 
@@ -122,7 +122,7 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 
 ### Keys in Structs
 
-A common scenario is to store the bolthold Key in the same struct that is stored in the boltDB value.  You can 
+A common scenario is to store the bolthold Key in the same struct that is stored in the boltDB value.  You can
 automatically populate a record's Key in a struct by using the `boltholdKey` struct tag when running `Find` queries.
 
 ```Go
@@ -165,7 +165,7 @@ And you wanted to find the most senior (first hired) employee in each division:
 result, err := store.FindAggregate(&Employee{}, nil, "Division") //nil query matches against all records
 ```
 
-This will return a slice of `Aggregate Result` from which you can extract your groups and find Min, Max, Avg, Count, 
+This will return a slice of `Aggregate Result` from which you can extract your groups and find Min, Max, Avg, Count,
 etc.
 
 ```Go
@@ -176,7 +176,7 @@ for i := range result {
 	result[i].Group(&division)
 	result[i].Min("Hired", employee)
 
-	fmt.Printf("The most senior employee in the %s division is %s.\n", 
+	fmt.Printf("The most senior employee in the %s division is %s.\n",
 		division, employee.FirstName + " " + employee.LastName)
 }
 ```
@@ -184,7 +184,7 @@ for i := range result {
 Aggregate queries become especially powerful when combined with the sub-querying capability of `MatchFunc`.
 
 
-Many more examples of queries can be found in the [find_test.go](https://github.com/timshannon/bolthold/blob/master/find_test.go) 
+Many more examples of queries can be found in the [find_test.go](https://github.com/timshannon/bolthold/blob/master/find_test.go)
 file in this repository.
 
 ## Comparing
@@ -202,25 +202,25 @@ to a string and compared lexicographically.
 
 ## Behavior Changes
 Since BoltHold is a higher level interface than BoltDB, there are some added helpers.  Instead of *Put*, you
-have the options of: 
+have the options of:
 * *Insert* - Fails if key already exists.
 * *Update* - Fails if key doesn't exist `ErrNotFound`.
 * *Upsert* - If key doesn't exist, it inserts the data, otherwise it updates the existing record.
 
-When getting data instead of returning `nil` if a value doesn't exist, BoltHold returns `boldhold.ErrNotFound`, and
-similarly when deleting data, instead of silently continuing if a value isn't found to delete, BoltHold returns 
-`bolthold.ErrNotFound`.  The exception to this is when using query based functions such as `Find` (returns an empty slice), 
+When getting data instead of returning `nil` if a value doesn't exist, BoltHold returns `bolthold.ErrNotFound`, and
+similarly when deleting data, instead of silently continuing if a value isn't found to delete, BoltHold returns
+`bolthold.ErrNotFound`.  The exception to this is when using query based functions such as `Find` (returns an empty slice),
 `DeleteMatching` and `UpdateMatching` where no error is returned.
 
 
 ## When should I use BoltHold?
-BoltHold will be useful in the same scenarios where BoltDB is useful, with the added benefit of being able to retire 
+BoltHold will be useful in the same scenarios where BoltDB is useful, with the added benefit of being able to retire
 some of your data filtering code and possibly improved performance.
 
-You can also use it instead of SQLite for many scenarios.  BoltHold's main benefit over SQLite is its simplicity when 
-working with Go Types.  There is no need for an ORM layer to translate records to types, simply put types in, and get 
-types out.  You also don't have to deal with database initialization.  Usually with SQLite you'll need several scripts 
-to create the database, create the tables you expect, and create any indexes.  With BoltHold you simply open a new file 
+You can also use it instead of SQLite for many scenarios.  BoltHold's main benefit over SQLite is its simplicity when
+working with Go Types.  There is no need for an ORM layer to translate records to types, simply put types in, and get
+types out.  You also don't have to deal with database initialization.  Usually with SQLite you'll need several scripts
+to create the database, create the tables you expect, and create any indexes.  With BoltHold you simply open a new file
 and put any type of data you want in it.
 
 ```Go
