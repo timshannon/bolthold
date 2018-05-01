@@ -633,6 +633,21 @@ func TestFindOnInvalidIndex(t *testing.T) {
 	})
 }
 
+func TestFindOnEmptyBucketWithIndex(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		// DO NOT INSERT DATA
+		var result []ItemTest
+
+		err := store.Find(&result, bolthold.Where("Category").Eq("animal").Index("Category"))
+		if err != nil {
+			t.Fatalf("Find query against a valid index name but an empty data bucket return an error!")
+		}
+		if len(result) > 0 {
+			t.Fatalf("Find query against an empty bucket returned results!")
+		}
+	})
+}
+
 func TestQueryStringPrint(t *testing.T) {
 	q := bolthold.Where("FirstField").Eq("first value").And("SecondField").Gt("Second Value").And("ThirdField").
 		Lt("Third Value").And("FourthField").Ge("FourthValue").And("FifthField").Le("FifthValue").And("SixthField").

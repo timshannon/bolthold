@@ -510,6 +510,13 @@ type record struct {
 
 func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int, action func(r *record) error) error {
 	storer := newStorer(dataType)
+
+	bkt := tx.Bucket([]byte(storer.Type()))
+	if bkt == nil || bkt.Stats().KeyN == 0 {
+		// if the bucket doesn't exist or is empty then our job is really easy!
+		return nil
+	}
+
 	if query.index != "" && tx.Bucket(indexBucketName(storer.Type(), query.index)) == nil {
 		return fmt.Errorf("The index %s does not exist", query.index)
 	}
