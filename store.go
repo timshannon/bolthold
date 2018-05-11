@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/boltdb/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // Store is a bolthold wrapper around a bolt DB

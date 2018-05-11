@@ -7,7 +7,7 @@ package bolthold
 import (
 	"errors"
 
-	"github.com/boltdb/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // ErrNotFound is returned when no data is found for the given key

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/boltdb/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // BoltholdIndexTag is the struct tag used to define an a field as indexable for a bolthold

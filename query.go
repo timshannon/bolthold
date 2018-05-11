@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/boltdb/bolt"
+	"github.com/coreos/bbolt"
 )
 
 const (

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/boltdb/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // AggregateResult allows you to access the results of an aggregate query
