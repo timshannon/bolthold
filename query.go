@@ -186,6 +186,10 @@ func (q *Query) Reverse() *Query {
 
 // Index specifies the index to use when running this query
 func (q *Query) Index(indexName string) *Query {
+	if strings.Contains(indexName, ".") {
+		// NOTE: I may reconsider this in the future
+		panic("Nested indexes are not supported.  Only top level structures can be indexed")
+	}
 	q.index = indexName
 	return q
 }
@@ -224,10 +228,9 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 			continue
 		}
 
-		//TODO: Allow deep names. struct1.field1.fieldChild
-		fVal := value.Elem().FieldByName(field)
-		if !fVal.IsValid() {
-			return false, fmt.Errorf("The field %s does not exist in the type %s", field, value)
+		fVal, err := fieldValue(value, field)
+		if err != nil {
+			return false, err
 		}
 
 		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false, currentRow)
@@ -240,6 +243,23 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 	}
 
 	return true, nil
+}
+
+func fieldValue(value reflect.Value, field string) (reflect.Value, error) {
+	fields := strings.Split(field, ".")
+
+	current := value
+	for i := range fields {
+		if current.Kind() == reflect.Ptr {
+			current = current.Elem().FieldByName(fields[i])
+		} else {
+			current = current.FieldByName(fields[i])
+		}
+		if !current.IsValid() {
+			return reflect.Value{}, fmt.Errorf("The field %s does not exist in the type %s", field, value)
+		}
+	}
+	return current, nil
 }
 
 func (c *Criterion) op(op int, value interface{}) *Query {
@@ -616,9 +636,22 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
 	// Validate sort fields
 	for _, field := range query.sort {
-		_, found := query.dataType.FieldByName(field)
-		if !found {
-			return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
+		fields := strings.Split(field, ".")
+
+		current := query.dataType
+		for i := range fields {
+			var structField reflect.StructField
+			found := false
+			if current.Kind() == reflect.Ptr {
+				structField, found = current.Elem().FieldByName(fields[i])
+			} else {
+				structField, found = current.FieldByName(fields[i])
+			}
+
+			if !found {
+				return fmt.Errorf("The field %s does not exist in the type %s", field, query.dataType)
+			}
+			current = structField.Type
 		}
 	}
 
@@ -643,8 +676,18 @@ func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r
 
 	sort.Slice(records, func(i, j int) bool {
 		for _, field := range query.sort {
-			value := records[i].value.Elem().FieldByName(field).Interface()
-			other := records[j].value.Elem().FieldByName(field).Interface()
+			val, err := fieldValue(records[i].value.Elem(), field)
+			if err != nil {
+				panic(err.Error()) // shouldn't happen due to field check above
+			}
+			value := val.Interface()
+
+			val, err = fieldValue(records[j].value.Elem(), field)
+			if err != nil {
+				panic(err.Error()) // shouldn't happen due to field check above
+			}
+
+			other := val.Interface()
 
 			if query.reverse {
 				value, other = other, value

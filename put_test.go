@@ -216,7 +216,7 @@ func TestUpsertReadTxn(t *testing.T) {
 }
 
 func TestUpdateMatching(t *testing.T) {
-	for _, tst := range tests {
+	for _, tst := range testResults {
 		t.Run(tst.name, func(t *testing.T) {
 			testWrap(t, func(store *bolthold.Store, t *testing.T) {
 

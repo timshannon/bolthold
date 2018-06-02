@@ -55,10 +55,6 @@ func benchWrap(b *testing.B, options *bolthold.Options, bench func(store *boltho
 
 var idVal uint64
 
-func resetID() {
-	idVal = 0
-}
-
 func id() []byte {
 	idVal++
 	b := make([]byte, 8)
@@ -77,10 +73,7 @@ func BenchmarkRawInsert(b *testing.B) {
 
 		err = store.Bolt().Update(func(tx *bolt.Tx) error {
 			_, err := tx.CreateBucket(bucket)
-			if err != nil {
-				return err
-			}
-			return nil
+			return err
 		})
 		if err != nil {
 			b.Fatalf("Error inserting raw bytes: %s", err)

@@ -84,11 +84,7 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 	}
 
 	if len(indexValue) == 0 {
-		err := b.Delete(indexKey)
-		if err != nil {
-			return err
-		}
-		return nil
+		return b.Delete(indexKey)
 	}
 
 	iVal, err = encode(indexValue)
@@ -96,12 +92,7 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 		return err
 	}
 
-	err = b.Put(indexKey, iVal)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return b.Put(indexKey, iVal)
 }
 
 // IndexExists tests if an index exists for the passed in field name
@@ -122,7 +113,7 @@ func (v *keyList) add(key []byte) {
 		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	if i < len(*v) && bytes.Compare((*v)[i], key) == 0 {
+	if i < len(*v) && bytes.Equal((*v)[i], key) {
 		// already added
 		return
 	}
@@ -149,7 +140,7 @@ func (v *keyList) in(key []byte) bool {
 		return bytes.Compare((*v)[i], key) >= 0
 	})
 
-	return (i < len(*v) && bytes.Compare((*v)[i], key) == 0)
+	return (i < len(*v) && bytes.Equal((*v)[i], key))
 }
 
 type iterator struct {

@@ -186,7 +186,7 @@ type test struct {
 	result []int // indices of test data to be found
 }
 
-var tests = []test{
+var testResults = []test{
 	test{
 		name:   "Equal Key",
 		query:  bolthold.Where(bolthold.Key).Eq(testData[4].Key),
@@ -505,8 +505,7 @@ func insertTestData(t *testing.T, store *bolthold.Store) {
 func TestFind(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		insertTestData(t, store)
-
-		for _, tst := range tests {
+		for _, tst := range testResults {
 			t.Run(tst.name, func(t *testing.T) {
 				var result []ItemTest
 				err := store.Find(&result, tst.query)
@@ -673,7 +672,7 @@ func TestQueryStringPrint(t *testing.T) {
 
 	// map order isn't guaranteed, check if all needed lines exist
 
-	tst := fmt.Sprintf("%s", q)
+	tst := q.String()
 
 	tstLines := strings.Split(tst, "\n")
 
@@ -930,4 +929,14 @@ func TestKeyStructTagIntoPtr(t *testing.T) {
 		}
 
 	})
+}
+
+func TestQueryNestedIndex(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Querying with a nested index field did not panic!")
+		}
+	}()
+
+	_ = bolthold.Where("Test").Eq("test").Index("Nested.Name")
 }
