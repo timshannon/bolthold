@@ -673,7 +673,7 @@ func TestQueryStringPrint(t *testing.T) {
 
 	// map order isn't guaranteed, check if all needed lines exist
 
-	tst := fmt.Sprintf("%s", q)
+	tst := q.String()
 
 	tstLines := strings.Split(tst, "\n")
 

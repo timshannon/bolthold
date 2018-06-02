@@ -42,10 +42,5 @@ func DefaultDecode(data []byte, value interface{}) error {
 		return err
 	}
 
-	err = de.Decode(value)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return de.Decode(value)
 }

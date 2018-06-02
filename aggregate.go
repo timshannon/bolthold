@@ -167,10 +167,7 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy ...str
 	var err error
 	err = s.Bolt().View(func(tx *bolt.Tx) error {
 		result, err = s.TxFindAggregate(tx, dataType, query, groupBy...)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	})
 
 	if err != nil {

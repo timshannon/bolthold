@@ -53,12 +53,7 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 	}
 
 	// remove any indexes
-	err = indexDelete(storer, tx, gk, value)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return indexDelete(storer, tx, gk, value)
 }
 
 // DeleteMatching deletes all of the records that match the passed in query

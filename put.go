@@ -175,12 +175,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	err = indexAdd(storer, tx, gk, data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return indexAdd(storer, tx, gk, data)
 }
 
 // Upsert inserts the record into the bolthold if it doesn't exist.  If it does already exist, then it updates
@@ -241,12 +236,7 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	err = indexAdd(storer, tx, gk, data)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return indexAdd(storer, tx, gk, data)
 }
 
 // UpdateMatching runs the update function for every record that match the passed in query
