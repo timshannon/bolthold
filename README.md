@@ -74,6 +74,21 @@ store.Find(&result, bolthold.Where(bolthold.Key).Ne(value))
 
 ```
 
+You can access nested structure fields in queries like this:
+
+```Go
+type Repo struct {
+  Name string
+  Contact ContactPerson
+}
+
+type ContactPerson struct {
+  Name string
+}
+
+store.Find(&repo, bolthold.Where("Contact.Name").Eq("some-name")
+```
+
 Instead of passing in a specific value to compare against in a query, you can compare against another field in the same
 struct.  Consider the following struct:
 
