@@ -154,6 +154,11 @@ var nestedTests = []test{
 		query:  bolthold.Where("Key").Ge(0).SortBy("L2.L3.Name"),
 		result: []int{4, 1, 2, 0, 3},
 	},
+	test{
+		name:   "Sort On Pointer",
+		query:  bolthold.Where("Key").Ge(0).SortBy("Pointer.Name"),
+		result: []int{4, 1, 2, 0, 3},
+	},
 }
 
 func TestNested(t *testing.T) {
