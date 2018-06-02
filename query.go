@@ -225,9 +225,9 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 		}
 
 		//TODO: Allow deep names. struct1.field1.fieldChild
-		fVal := value.Elem().FieldByName(field)
-		if !fVal.IsValid() {
-			return false, fmt.Errorf("The field %s does not exist in the type %s", field, value)
+		fVal, err := fieldValue(value, field)
+		if err != nil {
+			return false, err
 		}
 
 		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false, currentRow)
@@ -240,6 +240,21 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 	}
 
 	return true, nil
+}
+
+func fieldValue(value reflect.Value, field string) (reflect.Value, error) {
+	fields := strings.Split(field, ".")
+
+	fmt.Println("fields: ", fields)
+	current := value
+	for i := range fields {
+		current = current.Elem().FieldByName(fields[i])
+		if !current.IsValid() {
+			return reflect.Value{}, fmt.Errorf("The field %s does not exist in the type %s", field, value)
+		}
+	}
+	fmt.Println("Got value: ", current)
+	return current, nil
 }
 
 func (c *Criterion) op(op int, value interface{}) *Query {
@@ -615,6 +630,7 @@ func runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys key
 // runQuerySort runs the query without sort, skip, or limit, then applies them to the entire result set
 func runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
 	// Validate sort fields
+	//TODO: Handle sorting by nested fields
 	for _, field := range query.sort {
 		_, found := query.dataType.FieldByName(field)
 		if !found {
