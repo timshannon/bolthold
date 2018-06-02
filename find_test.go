@@ -502,47 +502,43 @@ func insertTestData(t *testing.T, store *bolthold.Store) {
 	}
 }
 
-func runTests(store *bolthold.Store, tests []test, t *testing.T) {
-	for _, tst := range tests {
-		t.Run(tst.name, func(t *testing.T) {
-			var result []ItemTest
-			err := store.Find(&result, tst.query)
-			if err != nil {
-				t.Fatalf("Error finding data from bolthold: %s", err)
-			}
-			if len(result) != len(tst.result) {
-				if testing.Verbose() {
-					t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result),
-						len(tst.result), result)
-				}
-				t.Fatalf("Find result count is %d wanted %d.", len(result), len(tst.result))
-			}
-
-			for i := range result {
-				found := false
-				for k := range tst.result {
-					if result[i].equal(&testData[tst.result[k]]) {
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					if testing.Verbose() {
-						t.Fatalf("%v should not be in the result set! Full results: %v",
-							result[i], result)
-					}
-					t.Fatalf("%v should not be in the result set!", result[i])
-				}
-			}
-		})
-	}
-}
-
 func TestFind(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		insertTestData(t, store)
-		runTests(store, testResults, t)
+		for _, tst := range testResults {
+			t.Run(tst.name, func(t *testing.T) {
+				var result []ItemTest
+				err := store.Find(&result, tst.query)
+				if err != nil {
+					t.Fatalf("Error finding data from bolthold: %s", err)
+				}
+				if len(result) != len(tst.result) {
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result),
+							len(tst.result), result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), len(tst.result))
+				}
+
+				for i := range result {
+					found := false
+					for k := range tst.result {
+						if result[i].equal(&testData[tst.result[k]]) {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						if testing.Verbose() {
+							t.Fatalf("%v should not be in the result set! Full results: %v",
+								result[i], result)
+						}
+						t.Fatalf("%v should not be in the result set!", result[i])
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -933,4 +929,14 @@ func TestKeyStructTagIntoPtr(t *testing.T) {
 		}
 
 	})
+}
+
+func TestQueryNestedIndex(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatalf("Querying with a nested index field did not panic!")
+		}
+	}()
+
+	_ = bolthold.Where("Test").Eq("test").Index("Nested.Name")
 }

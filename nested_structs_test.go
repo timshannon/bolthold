@@ -5,6 +5,7 @@
 package bolthold_test
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/timshannon/bolthold"
@@ -23,7 +24,7 @@ type Embed struct {
 }
 
 type Nest struct {
-	Name string `boltholdIndex:"Name"`
+	Name string
 }
 
 type Level2 struct {
@@ -103,6 +104,23 @@ var nestedData = []Nested{
 			Name: "Jill",
 		},
 	},
+	Nested{
+		Key: 4,
+		Embed: Embed{
+			Color: "blue",
+		},
+		L1: Nest{
+			Name: "Abner",
+		},
+		L2: Level2{
+			Name: "Abner",
+			L3: Nest{
+				Name: "Abner",
+			},
+		}, Pointer: &Nest{
+			Name: "Abner",
+		},
+	},
 }
 
 var nestedTests = []test{
@@ -134,17 +152,7 @@ var nestedTests = []test{
 	test{
 		name:   "Sort",
 		query:  bolthold.Where("Key").Ge(0).SortBy("L2.L3.Name"),
-		result: []int{1, 2, 0, 3},
-	},
-	test{
-		name:   "Index",
-		query:  bolthold.Where("L1.Name").Eq("Joe").Index("L1.Name"),
-		result: []int{0},
-	},
-	test{
-		name:   "Index Multiple Levels",
-		query:  bolthold.Where("L2.L3.Name").Eq("Joe").Index("L2.L3.Name"),
-		result: []int{0, 3},
+		result: []int{4, 1, 2, 0, 3},
 	},
 }
 
@@ -156,6 +164,39 @@ func TestNested(t *testing.T) {
 				t.Fatalf("Error inserting nested test data for nested find test: %s", err)
 			}
 		}
-		runTests(store, nestedTests, t)
+		for _, tst := range nestedTests {
+			t.Run(tst.name, func(t *testing.T) {
+				var result []Nested
+				err := store.Find(&result, tst.query)
+				if err != nil {
+					t.Fatalf("Error finding data from bolthold: %s", err)
+				}
+				if len(result) != len(tst.result) {
+					if testing.Verbose() {
+						t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result),
+							len(tst.result), result)
+					}
+					t.Fatalf("Find result count is %d wanted %d.", len(result), len(tst.result))
+				}
+
+				for i := range result {
+					found := false
+					for k := range tst.result {
+						if reflect.DeepEqual(result[i], nestedData[tst.result[k]]) {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						if testing.Verbose() {
+							t.Fatalf("%v should not be in the result set! Full results: %v",
+								result[i], result)
+						}
+						t.Fatalf("%v should not be in the result set!", result[i])
+					}
+				}
+			})
+		}
 	})
 }
