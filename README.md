@@ -34,7 +34,7 @@ type Person struct {
 ```
 
 This means that there will be an index created for `Division` that will contain the set of unique divisions, and the
-main record keys they refer to.
+main record keys they refer to.  More information on how indexes work can be found [here](https://github.com/timshannon/bolthold/issues/36#issuecomment-414720348)
 
 Optionally, you can implement the `Storer` interface, to specify your own indexes, rather than using the `boltHoldIndex`
 struct tag.
