@@ -7,7 +7,7 @@ package bolthold
 import (
 	"errors"
 
-	"github.com/coreos/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 // ErrNotFound is returned when no data is found for the given key

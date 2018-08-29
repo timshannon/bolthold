@@ -11,8 +11,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/bbolt"
 	"github.com/timshannon/bolthold"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestOpen(t *testing.T) {
