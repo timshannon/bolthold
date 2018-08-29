@@ -8,7 +8,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/coreos/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 // ErrKeyExists is the error returned when data is being Inserted for a Key that already exists

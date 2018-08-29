@@ -10,8 +10,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coreos/bbolt"
 	"github.com/timshannon/bolthold"
+	bolt "go.etcd.io/bbolt"
 )
 
 type BenchData struct {

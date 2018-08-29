@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/coreos/bbolt"
+	bolt "go.etcd.io/bbolt"
 )
 
 // Store is a bolthold wrapper around a bolt DB

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coreos/bbolt"
 	"github.com/timshannon/bolthold"
+	bolt "go.etcd.io/bbolt"
 )
 
 func TestDelete(t *testing.T) {
