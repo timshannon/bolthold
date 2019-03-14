@@ -778,6 +778,7 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 		func(r *record) error {
 			var rowValue reflect.Value
 
+			// FIXME:
 			if elType.Kind() == reflect.Ptr {
 				rowValue = r.value
 			} else {
@@ -785,7 +786,11 @@ func findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 			}
 
 			if keyType != nil {
-				err := decode(r.key, rowValue.FieldByName(keyField).Addr().Interface())
+				rowKey := rowValue
+				for rowKey.Kind() == reflect.Ptr {
+					rowKey = rowKey.Elem()
+				}
+				err := decode(r.key, rowKey.FieldByName(keyField).Addr().Interface())
 				if err != nil {
 					return err
 				}
