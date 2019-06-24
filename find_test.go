@@ -522,6 +522,27 @@ var testResults = []test{
 			Index("Category"),
 		result: []int{0, 1, 3, 6, 11},
 	},
+	test{
+		name: "Function Field without recordAccess",
+		query: bolthold.Where("Name").MatchFunc(func(name string) (bool, error) {
+			return strings.HasPrefix(name, "oat"), nil
+		}),
+		result: []int{12},
+	},
+	test{
+		name: "Function Record without record access",
+		query: bolthold.Where("ID").MatchFunc(func(record *ItemTest) (bool, error) {
+			return strings.HasPrefix(record.Name, "oat"), nil
+		}),
+		result: []int{12},
+	},
+	test{
+		name: "Issue #8 - Function Field on a specific index without record access",
+		query: bolthold.Where("Category").MatchFunc(func(category string) (bool, error) {
+			return !strings.HasPrefix(category, "veh"), nil
+		}).Index("Category"),
+		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -1018,6 +1039,20 @@ func TestNestedStructPointer(t *testing.T) {
 
 		if !device.Notifications.Enabled {
 			t.Fatalf("Notifications.Enabled Expected  %t, got %t", true, device.Notifications.Enabled)
+		}
+	})
+}
+
+func TestErrorsFromMatchFunc(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		var result []ItemTest
+		err := store.Find(&result, bolthold.Where("Name").MatchFunc(func(name string) (bool, error) {
+			return false, fmt.Errorf("New Error")
+		}))
+
+		if err == nil {
+			t.Fatalf("Error did not get returned properly from MatchFunc")
 		}
 	})
 }

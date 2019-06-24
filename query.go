@@ -332,7 +332,7 @@ func (c *Criterion) Not() *Criterion {
 }
 
 // MatchFunc is a function used to test an arbitrary matching value in a query
-type MatchFunc func(ra *RecordAccess) (bool, error)
+type MatchFunc func(ra interface{}) (bool, error)
 
 // RecordAccess allows access to the current record, field or allows running a subquery within a
 // MatchFunc
@@ -365,7 +365,7 @@ func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*Ag
 }
 
 // MatchFunc will test if a field matches the passed in function
-func (c *Criterion) MatchFunc(match MatchFunc) *Query {
+func (c *Criterion) MatchFunc(match interface{}) *Query {
 	if c.query.currentField == Key {
 		panic("Match func cannot be used against Keys, as the Key type is unknown at runtime, and there is no value compare against")
 	}
@@ -417,11 +417,35 @@ func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interfa
 	case re:
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", value))), nil
 	case fn:
-		return c.value.(MatchFunc)(&RecordAccess{
+		fnVal := reflect.ValueOf(c.value)
+		fnType := reflect.TypeOf(c.value)
+		ra := &RecordAccess{
 			field:  value,
 			record: currentRow,
 			tx:     c.query.tx,
-		})
+		}
+
+		var out []reflect.Value
+
+		if fnType.In(0) == reflect.TypeOf(ra) {
+			out = fnVal.Call([]reflect.Value{reflect.ValueOf(ra)})
+		}
+
+		if fnType.In(0) == reflect.TypeOf(ra.field) {
+			out = fnVal.Call([]reflect.Value{reflect.ValueOf(ra.field)})
+		}
+		if fnType.In(0) == reflect.TypeOf(ra.record) {
+			out = fnVal.Call([]reflect.Value{reflect.ValueOf(ra.record)})
+		}
+
+		if len(out) != 2 {
+			return false, fmt.Errorf("MatchFunc does not return (bool, error)")
+		}
+
+		if out[1].IsNil() {
+			return out[0].Interface().(bool), nil
+		}
+		return false, out[1].Interface().(error)
 	case isnil:
 		return reflect.ValueOf(value).IsNil(), nil
 	default:
