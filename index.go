@@ -288,7 +288,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 // however if there is only one critrion and it is either > = or >= then we can seek to the value and
 // save reads
 func seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
-	if len(criteria) != 1 {
+	if len(criteria) != 1 || criteria[0].negate {
 		return cursor.First()
 	}
 

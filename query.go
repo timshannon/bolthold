@@ -76,6 +76,7 @@ type Criterion struct {
 	operator int
 	value    interface{}
 	inValues []interface{}
+	negate   bool
 }
 
 func hasMatchFunc(criteria []*Criterion) bool {
@@ -324,6 +325,12 @@ func (c *Criterion) IsNil() *Query {
 	return c.op(isnil, nil)
 }
 
+// Not will negate the following critierion
+func (c *Criterion) Not() *Criterion {
+	c.negate = !c.negate
+	return c
+}
+
 // MatchFunc is a function used to test an arbitrary matching value in a query
 type MatchFunc func(ra *RecordAccess) (bool, error)
 
@@ -449,7 +456,8 @@ func matchesAllCriteria(criteria []*Criterion, value interface{}, encoded bool, 
 		if err != nil {
 			return false, err
 		}
-		if !ok {
+
+		if criteria[i].negate == ok {
 			return false, nil
 		}
 	}
@@ -496,6 +504,9 @@ func (q *Query) String() string {
 
 func (c *Criterion) String() string {
 	s := ""
+	if c.negate {
+		s += "NOT "
+	}
 	switch c.operator {
 	case eq:
 		s += "=="
