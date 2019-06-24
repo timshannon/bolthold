@@ -62,7 +62,10 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * In - `Where("field").In(val1, val2, val3)`
 * IsNil - `Where("field").IsNil()`
 * Regular Expression - `Where("field").RegExp(regexp.MustCompile("ea"))`
-* Matches Function - `Where("field").MatchFunc(func(ra *RecordAccess) (bool, error))`
+* Matches Function 
+  * `Where("field").MatchFunc(func(ra *RecordAccess) (bool, error)) // see RecordAccess Type`
+  * `Where("field").MatchFunc(func(m *MyType) (bool, error))`
+  * `Where("field").MatchFunc(func(field string) (bool, error))`
 * Skip - `Where("field").Eq(value).Skip(10)`
 * Limit - `Where("field").Eq(value).Limit(10)`
 * SortBy - `Where("field").Eq(value).SortBy("field1", "field2")`
