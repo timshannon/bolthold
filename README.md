@@ -68,6 +68,7 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * SortBy - `Where("field").Eq(value).SortBy("field1", "field2")`
 * Reverse - `Where("field").Eq(value).SortBy("field").Reverse()`
 * Index - `Where("field").Eq(value).Index("indexName")`
+* Not - `Where("field").Not().In(val1, val2, val3)`
 
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
