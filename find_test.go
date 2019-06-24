@@ -303,7 +303,7 @@ var testResults = []test{
 			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+				return false, fmt.Errorf("field not a string, it's a %T", field)
 			}
 
 			return strings.HasPrefix(field.(string), "oat"), nil
@@ -316,7 +316,7 @@ var testResults = []test{
 			record := ra.Record()
 			_, ok := record.(*ItemTest)
 			if !ok {
-				return false, fmt.Errorf("Record not an ItemTest, it's a %T!", record)
+				return false, fmt.Errorf("record not an ItemTest, it's a %T", record)
 			}
 
 			return strings.HasPrefix(record.(*ItemTest).Name, "oat"), nil
@@ -435,7 +435,7 @@ var testResults = []test{
 			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+				return false, fmt.Errorf("field not a string, it's a %T", field)
 			}
 
 			return !strings.HasPrefix(field.(string), "veh"), nil
@@ -448,7 +448,7 @@ var testResults = []test{
 			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+				return false, fmt.Errorf("field not a string, it's a %T", field)
 			}
 
 			return !strings.HasPrefix(field.(string), "veh"), nil
@@ -490,6 +490,37 @@ var testResults = []test{
 		name:   "Key test after lead index",
 		query:  bolthold.Where("Category").Eq("food").Index("Category").And(bolthold.Key).Gt(testData[10].Key),
 		result: []int{12, 15},
+	},
+	test{
+		name:   "Not In",
+		query:  bolthold.Where("Category").Not().In("food", "animal"),
+		result: []int{0, 1, 3, 6, 11},
+	},
+	test{
+		name:   "Not IsNil",
+		query:  bolthold.Where("Tags").Not().IsNil(),
+		result: []int{4, 7, 10, 12, 15},
+	},
+	test{
+		name:   "Multiple Not criteria",
+		query:  bolthold.Where("Tags").Not().IsNil().And("Name").Not().RegExp(regexp.MustCompile("ea")),
+		result: []int{4, 7, 10, 15},
+	},
+	test{
+		name:   "Not Equal Key with not modifier",
+		query:  bolthold.Where(bolthold.Key).Not().Eq(testData[4].Key),
+		result: []int{0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Double Negative", // don't do this, it's confusing
+		query:  bolthold.Where(bolthold.Key).Not().Not().Eq(testData[4].Key),
+		result: []int{4},
+	},
+	test{
+		name: "Not on Index",
+		query: bolthold.Where("Category").Not().Eq("food").And("Category").Not().Eq("animal").
+			Index("Category"),
+		result: []int{0, 1, 3, 6, 11},
 	},
 }
 
@@ -861,7 +892,7 @@ func TestKeyMatchFunc(t *testing.T) {
 			field := ra.Field()
 			_, ok := field.(string)
 			if !ok {
-				return false, fmt.Errorf("Field not a string, it's a %T!", field)
+				return false, fmt.Errorf("field not a string, it's a %T", field)
 			}
 
 			return strings.HasPrefix(field.(string), "oat"), nil
