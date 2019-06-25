@@ -1015,3 +1015,23 @@ func aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query, groupBy ...
 
 	return result, nil
 }
+
+func countQuery(tx *bolt.Tx, dataType interface{}, query *Query) (int, error) {
+	if query == nil {
+		query = &Query{}
+	}
+
+	count := 0
+
+	err := runQuery(tx, dataType, query, nil, query.skip,
+		func(r *record) error {
+			count++
+			return nil
+		})
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

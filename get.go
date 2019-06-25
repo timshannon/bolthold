@@ -57,3 +57,19 @@ func (s *Store) Find(result interface{}, query *Query) error {
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 	return findQuery(tx, result, query)
 }
+
+// Count returns the current record count for the passed in datatype
+func (s *Store) Count(dataType interface{}, query *Query) (int, error) {
+	count := 0
+	err := s.Bolt().View(func(tx *bolt.Tx) error {
+		var txErr error
+		count, txErr = s.TxCount(tx, dataType, query)
+		return txErr
+	})
+	return count, err
+}
+
+// TxCount returns the current record count from within the given transaction for the passed in datatype
+func (s *Store) TxCount(tx *bolt.Tx, dataType interface{}, query *Query) (int, error) {
+	return countQuery(tx, dataType, query)
+}
