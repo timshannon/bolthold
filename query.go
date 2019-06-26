@@ -1035,3 +1035,63 @@ func countQuery(tx *bolt.Tx, dataType interface{}, query *Query) (int, error) {
 
 	return count, nil
 }
+
+func findOneQuery(tx *bolt.Tx, result interface{}, query *Query) error {
+	if query == nil {
+		query = &Query{}
+	}
+
+	originalLimit := query.limit
+
+	query.limit = 1
+
+	resultVal := reflect.ValueOf(result)
+	if resultVal.Kind() != reflect.Ptr {
+		panic("result argument must be an address")
+	}
+
+	structType := resultVal.Elem().Type()
+
+	var keyType reflect.Type
+	var keyField string
+
+	for i := 0; i < structType.NumField(); i++ {
+		if strings.Contains(string(structType.Field(i).Tag), BoltholdKeyTag) {
+			keyType = structType.Field(i).Type
+			keyField = structType.Field(i).Name
+			break
+		}
+	}
+
+	found := false
+
+	err := runQuery(tx, result, query, nil, query.skip,
+		func(r *record) error {
+			found = true
+
+			if keyType != nil {
+				rowKey := r.value
+				for rowKey.Kind() == reflect.Ptr {
+					rowKey = rowKey.Elem()
+				}
+				err := decode(r.key, rowKey.FieldByName(keyField).Addr().Interface())
+				if err != nil {
+					return err
+				}
+			}
+			resultVal.Elem().Set(r.value.Elem())
+
+			return nil
+		})
+	query.limit = originalLimit
+
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return ErrNotFound
+	}
+
+	return nil
+}
