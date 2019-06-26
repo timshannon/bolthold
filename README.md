@@ -142,6 +142,12 @@ store.UpdateMatching(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth
 })
 ```
 
+If you simply want to count the number of records returned by a query use the `Count` method:
+```Go
+ // need to pass in empty datatype so bolthold knows what type to count
+count, err := store.Count(&Person{}, bolthold.Where("Death").Lt(bolthold.Field("Birth")))
+```
+
 ### Keys in Structs
 
 A common scenario is to store the bolthold Key in the same struct that is stored in the boltDB value.  You can

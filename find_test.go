@@ -1056,3 +1056,21 @@ func TestErrorsFromMatchFunc(t *testing.T) {
 		}
 	})
 }
+
+func TestCount(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		for _, tst := range testResults {
+			t.Run(tst.name, func(t *testing.T) {
+				count, err := store.Count(ItemTest{}, tst.query)
+				if err != nil {
+					t.Fatalf("Error counting data from bolthold: %s", err)
+				}
+
+				if count != len(tst.result) {
+					t.Fatalf("Count result is %d wanted %d.", count, len(tst.result))
+				}
+			})
+		}
+	})
+}
