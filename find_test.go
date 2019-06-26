@@ -949,6 +949,15 @@ func TestKeyStructTag(t *testing.T) {
 			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
 		}
 
+		oneResult := KeyTest{}
+		err = store.FindOne(&oneResult, bolthold.Where(bolthold.Key).Eq(key))
+		if err != nil {
+			t.Fatalf("Error running FindOne in TestKeyStructTag. ERROR: %s", err)
+		}
+
+		if oneResult.Key != key {
+			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
+		}
 	})
 }
 
@@ -980,6 +989,16 @@ func TestKeyStructTagIntoPtr(t *testing.T) {
 			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
 		}
 
+		oneResult := KeyTest{}
+
+		err = store.FindOne(&oneResult, bolthold.Where(bolthold.Key).Eq(key))
+		if err != nil {
+			t.Fatalf("Error running FindOne in TestKeyStructTag. ERROR: %s", err)
+		}
+
+		if *oneResult.Key != key {
+			t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result[0].Key)
+		}
 	})
 }
 
@@ -1096,5 +1115,17 @@ func TestFindOne(t *testing.T) {
 				}
 			})
 		}
+	})
+}
+
+func TestFindOneWithNonPtr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("Running FindOne with non pointer did not panic!")
+			}
+		}()
+		result := ItemTest{}
+		_ = store.FindOne(result, bolthold.Where("Name").Eq("blah"))
 	})
 }
