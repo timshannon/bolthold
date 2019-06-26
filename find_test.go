@@ -270,7 +270,7 @@ var testResults = []test{
 	test{
 		name:   "Greater Than or Equal To Field Without Index",
 		query:  bolthold.Where("ID").Ge(10),
-		result: []int{12, 14, 15, 11},
+		result: []int{11, 12, 14, 15},
 	},
 	test{
 		name:   "Greater Than or Equal To Field With Index",
@@ -280,17 +280,17 @@ var testResults = []test{
 	test{
 		name:   "In",
 		query:  bolthold.Where("ID").In(5, 8, 3),
-		result: []int{6, 7, 4, 13, 3},
+		result: []int{3, 6, 7, 4, 13},
 	},
 	test{
 		name:   "In on data from other index",
 		query:  bolthold.Where("ID").In(5, 8, 3).Index("Category"),
-		result: []int{6, 7, 4, 13, 3},
+		result: []int{4, 3, 6, 7, 13},
 	},
 	test{
 		name:   "In on index",
 		query:  bolthold.Where("Category").In("food", "animal").Index("Category"),
-		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
+		result: []int{4, 2, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
 	test{
 		name:   "Regular Expression",
@@ -422,7 +422,7 @@ var testResults = []test{
 	test{
 		name:   "Skip with Or query, that crosses or boundary",
 		query:  bolthold.Where("Category").Eq("vehicle").Or(bolthold.Where("Category").Eq("animal")).Skip(8),
-		result: []int{9, 13, 14, 16},
+		result: []int{16, 9, 13, 14},
 	},
 	test{
 		name:   "Limit",
@@ -1069,6 +1069,30 @@ func TestCount(t *testing.T) {
 
 				if count != len(tst.result) {
 					t.Fatalf("Count result is %d wanted %d.", count, len(tst.result))
+				}
+			})
+		}
+	})
+}
+
+func TestFindOne(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		insertTestData(t, store)
+		for _, tst := range testResults {
+			t.Run(tst.name, func(t *testing.T) {
+				result := &ItemTest{}
+				err := store.FindOne(result, tst.query)
+				if len(tst.result) == 0 && err == bolthold.ErrNotFound {
+					return
+				}
+
+				if err != nil {
+					t.Fatalf("Error finding one data from bolthold: %s", err)
+				}
+
+				if !result.equal(&testData[tst.result[0]]) {
+					t.Fatalf("Result doesnt match the first record in the testing result set. "+
+						"Expected key of %d got %d", &testData[tst.result[0]].Key, result.Key)
 				}
 			})
 		}

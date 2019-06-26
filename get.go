@@ -58,6 +58,19 @@ func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
 	return findQuery(tx, result, query)
 }
 
+// FindOne returns a single record, and so result is NOT a slice, but an pointer to a struct, if no record is found
+// that matches the query, then it returns ErrNotFound
+func (s *Store) FindOne(result interface{}, query *Query) error {
+	return s.Bolt().View(func(tx *bolt.Tx) error {
+		return s.TxFindOne(tx, result, query)
+	})
+}
+
+// TxFindOne allows you to pass in your own bolt transaction to retrieve a single record from the bolthold
+func (s *Store) TxFindOne(tx *bolt.Tx, result interface{}, query *Query) error {
+	return findOneQuery(tx, result, query)
+}
+
 // Count returns the current record count for the passed in datatype
 func (s *Store) Count(dataType interface{}, query *Query) (int, error) {
 	count := 0
