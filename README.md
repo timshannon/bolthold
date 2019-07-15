@@ -227,10 +227,10 @@ for i, v := range t {
 where := bolthold.Where("Id").In(s...)
 ```
 
-You can use the helper function `bh.Slice` which does exactly that.
+You can use the helper function `bolthold.Slice` which does exactly that.
 ```Go
 t := []string{"1", "2", "3", "4"}
-where := bolthold.Where("Id").In(bh.Slice(t)...)
+where := bolthold.Where("Id").In(bolthold.Slice(t)...)
 
 ```
 
