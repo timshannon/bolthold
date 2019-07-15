@@ -81,7 +81,7 @@ var testData = []ItemTest{
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
-		Tags:     []string{"cooked"},
+		Tags:     []string{"cooked", "takeout"},
 	},
 	ItemTest{
 		Key:      5,
@@ -107,7 +107,7 @@ var testData = []ItemTest{
 		Name:     "pizza",
 		Category: "food",
 		Created:  time.Now(),
-		Tags:     []string{"cooked"},
+		Tags:     []string{"cooked", "takeout"},
 	},
 	ItemTest{
 		Key:      8,
@@ -129,7 +129,7 @@ var testData = []ItemTest{
 		Name:     "tacos",
 		Category: "food",
 		Created:  time.Now().AddDate(-3, 0, 0),
-		Tags:     []string{"cooked"},
+		Tags:     []string{"cooked", "takeout"},
 		Color:    "orange",
 	},
 	ItemTest{
@@ -147,7 +147,7 @@ var testData = []ItemTest{
 		Name:     "oatmeal",
 		Category: "food",
 		Created:  time.Now().AddDate(0, 0, -30),
-		Tags:     []string{"cooked"},
+		Tags:     []string{"cooked", "healthy"},
 	},
 	ItemTest{
 		Key:      13,
@@ -169,7 +169,7 @@ var testData = []ItemTest{
 		Name:     "fish",
 		Category: "food",
 		Created:  time.Now(),
-		Tags:     []string{"cooked"},
+		Tags:     []string{"cooked", "healthy"},
 	},
 	ItemTest{
 		Key:      16,
@@ -543,6 +543,41 @@ var testResults = []test{
 		}).Index("Category"),
 		result: []int{2, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16},
 	},
+	test{
+		name:   "Contains",
+		query:  bolthold.Where("Tags").Contains("takeout"),
+		result: []int{4, 7, 10},
+	},
+	test{
+		name:   "Contains Any",
+		query:  bolthold.Where("Tags").ContainsAny("takeout", "healthy"),
+		result: []int{4, 7, 10, 12, 15},
+	},
+	test{
+		name:   "Contains All",
+		query:  bolthold.Where("Tags").ContainsAll("takeout", "healthy"),
+		result: []int{},
+	},
+	test{
+		name:   "Contains All #2",
+		query:  bolthold.Where("Tags").ContainsAll("cooked", "healthy"),
+		result: []int{12, 15},
+	},
+	test{
+		name:   "bh.Slice",
+		query:  bolthold.Where("Tags").ContainsAll(bolthold.Slice([]string{"cooked", "healthy"})...),
+		result: []int{12, 15},
+	},
+	test{
+		name:   "Not In bh.Slice",
+		query:  bolthold.Where("Category").Not().In(bolthold.Slice([]string{"food", "animal"})...),
+		result: []int{0, 1, 3, 6, 11},
+	},
+	test{
+		name:   "Contains on non-slice",
+		query:  bolthold.Where("Category").Contains("cooked"),
+		result: []int{},
+	},
 }
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
@@ -706,7 +741,11 @@ func TestQueryStringPrint(t *testing.T) {
 		And("ThirdField").RegExp(regexp.MustCompile("test")).Index("IndexName").And("FirstField").
 		MatchFunc(func(ra *bolthold.RecordAccess) (bool, error) {
 			return true, nil
-		}))
+		})).
+		And("FirstField").Not().Eq("negative").
+		And("FirstField").Contains("value").
+		And("SecondField").ContainsAny("val1", "val2", "val3").
+		And("ThirdField").ContainsAll("val1", "val2", "val3")
 
 	contains := []string{
 		"FirstField == first value",
@@ -720,6 +759,10 @@ func TestQueryStringPrint(t *testing.T) {
 		"SecondField is nil",
 		"ThirdField matches the regular expression test",
 		"Using Index [IndexName]",
+		"FirstField NOT == negative",
+		"FirstField contains value",
+		"SecondField contains any of [val1 val2 val3]",
+		"ThirdField contains all of [val1 val2 val3]",
 	}
 
 	// map order isn't guaranteed, check if all needed lines exist
