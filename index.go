@@ -298,7 +298,10 @@ func seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) 
 			return cursor.First()
 		}
 
-		return cursor.Seek(seek)
+		k, v := cursor.Seek(seek)
+		if k != nil {
+			return k, v
+		}
 	}
 
 	return cursor.First()
