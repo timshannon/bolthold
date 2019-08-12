@@ -1172,3 +1172,22 @@ func TestFindOneWithNonPtr(t *testing.T) {
 		_ = store.FindOne(result, bolthold.Where("Name").Eq("blah"))
 	})
 }
+
+func Test67SeekCursor(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type Test struct {
+			TestString string
+		}
+
+		store.Upsert(-5, Test{TestString: "Test"})
+		store.Upsert(-3, Test{TestString: "Test2"})
+		store.Upsert(-1, Test{TestString: "Test3"})
+
+		var result []Test
+		store.Find(&result, bolthold.Where(bolthold.Key).Gt(-4).Limit(3))
+
+		if len(result) != 2 {
+			t.Fatalf("Expected len of 2 got %d", len(result))
+		}
+	})
+}

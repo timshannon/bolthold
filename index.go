@@ -175,7 +175,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = seekCursor(cursor, criteria)
+					k, _ = cursor.First()
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -249,7 +249,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 		for len(nKeys) < iteratorKeyMinCacheSize {
 			var k, v []byte
 			if prepCursor {
-				k, v = seekCursor(cursor, criteria)
+				k, v = cursor.First()
 				prepCursor = false
 			} else {
 				k, v = cursor.Next()
@@ -282,26 +282,6 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	return iter
 
-}
-
-// seekCursor preps usually will simply set the cursor to the first k/v and return it,
-// however if there is only one critrion and it is either > = or >= then we can seek to the value and
-// save reads
-func seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
-	if len(criteria) != 1 || criteria[0].negate {
-		return cursor.First()
-	}
-
-	if criteria[0].operator == gt || criteria[0].operator == ge || criteria[0].operator == eq {
-		seek, err := encode(criteria[0].value)
-		if err != nil {
-			return cursor.First()
-		}
-
-		return cursor.Seek(seek)
-	}
-
-	return cursor.First()
 }
 
 // Next returns the next key value that matches the iterators criteria
