@@ -24,10 +24,10 @@ const iteratorKeyMinCacheSize = 100
 type Index func(name string, value interface{}) ([]byte, error)
 
 // adds an item to the index
-func indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
+func (s *Store) indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
-		err := indexUpdate(storer.Type(), name, index, tx, key, data, false)
+		err := s.indexUpdate(storer.Type(), name, index, tx, key, data, false)
 		if err != nil {
 			return err
 		}
@@ -38,11 +38,11 @@ func indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
 
 // removes an item from the index
 // be sure to pass the data from the old record, not the new one
-func indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData interface{}) error {
+func (s *Store) indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData interface{}) error {
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		err := indexUpdate(storer.Type(), name, index, tx, key, originalData, true)
+		err := s.indexUpdate(storer.Type(), name, index, tx, key, originalData, true)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,8 @@ func indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData interface{
 }
 
 // adds or removes a specific index on an item
-func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byte, value interface{}, delete bool) error {
+func (s *Store) indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byte, value interface{},
+	delete bool) error {
 	indexKey, err := index(indexName, value)
 	if indexKey == nil {
 		return nil
@@ -71,7 +72,7 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 
 	iVal := b.Get(indexKey)
 	if iVal != nil {
-		err = decode(iVal, &indexValue)
+		err = s.decode(iVal, &indexValue)
 		if err != nil {
 			return err
 		}
@@ -87,7 +88,7 @@ func indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byt
 		return b.Delete(indexKey)
 	}
 
-	iVal, err = encode(indexValue)
+	iVal, err = s.encode(indexValue)
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ type iterator struct {
 	err         error
 }
 
-func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
+func (s *Store) newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 	iter := &iterator{
 		dataBucket: tx.Bucket([]byte(typeName)),
@@ -186,12 +187,12 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 
 				val := reflect.New(query.dataType)
 				v := iter.dataBucket.Get(k)
-				err := decode(v, val.Interface())
+				err := s.decode(v, val.Interface())
 				if err != nil {
 					return nil, err
 				}
 
-				ok, err := matchesAllCriteria(criteria, k, true, val.Interface())
+				ok, err := matchesAllCriteria(s, criteria, k, true, val.Interface())
 				if err != nil {
 					return nil, err
 				}
@@ -259,7 +260,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			}
 
 			// no currentRow on indexes as it refers to multiple rows
-			ok, err := matchesAllCriteria(criteria, k, true, nil)
+			ok, err := matchesAllCriteria(s, criteria, k, true, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -267,7 +268,7 @@ func newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
 			if ok {
 				// append the slice of keys stored in the index
 				var keys = make(keyList, 0)
-				err := decode(v, &keys)
+				err := s.decode(v, &keys)
 				if err != nil {
 					return nil, err
 				}

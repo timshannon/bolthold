@@ -222,7 +222,7 @@ func (q *Query) Or(query *Query) *Query {
 	return q
 }
 
-func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow interface{}) (bool, error) {
+func (q *Query) matchesAllFields(s *Store, key []byte, value reflect.Value, currentRow interface{}) (bool, error) {
 	if q.IsEmpty() {
 		return true, nil
 	}
@@ -234,7 +234,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 		}
 
 		if field == Key {
-			ok, err := matchesAllCriteria(criteria, key, true, currentRow)
+			ok, err := matchesAllCriteria(s, criteria, key, true, currentRow)
 			if err != nil {
 				return false, err
 			}
@@ -250,7 +250,7 @@ func (q *Query) matchesAllFields(key []byte, value reflect.Value, currentRow int
 			return false, err
 		}
 
-		ok, err := matchesAllCriteria(criteria, fVal.Interface(), false, currentRow)
+		ok, err := matchesAllCriteria(s, criteria, fVal.Interface(), false, currentRow)
 		if err != nil {
 			return false, err
 		}
@@ -383,6 +383,7 @@ type MatchFunc func(ra interface{}) (bool, error)
 // MatchFunc
 type RecordAccess struct {
 	tx     *bolt.Tx
+	s      *Store
 	record interface{}
 	field  interface{}
 }
@@ -400,13 +401,13 @@ func (r *RecordAccess) Record() interface{} {
 // SubQuery allows you to run another query in the same transaction for each
 // record in a parent query
 func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
-	return findQuery(r.tx, result, query)
+	return r.s.findQuery(r.tx, result, query)
 }
 
 // SubAggregateQuery allows you to run another aggregate query in the same transaction for each
 // record in a parent query
 func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*AggregateResult, error) {
-	return aggregateQuery(r.tx, r.record, query, groupBy...)
+	return r.s.aggregateQuery(r.tx, r.record, query, groupBy...)
 }
 
 // MatchFunc will test if a field matches the passed in function
@@ -419,14 +420,14 @@ func (c *Criterion) MatchFunc(match interface{}) *Query {
 }
 
 // test if the criterion passes with the passed in value
-func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interface{}) (bool, error) {
+func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentRow interface{}) (bool, error) {
 	var recordValue interface{}
 	if encoded {
 		if len(testValue.([]byte)) != 0 {
 			if c.operator == in || c.operator == any || c.operator == all {
 				// value is a slice of values, use c.values
 				recordValue = reflect.New(reflect.TypeOf(c.values[0])).Interface()
-				err := decode(testValue.([]byte), recordValue)
+				err := s.decode(testValue.([]byte), recordValue)
 				if err != nil {
 					return false, err
 				}
@@ -434,7 +435,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interfa
 			} else {
 				// used with keys
 				recordValue = reflect.New(reflect.TypeOf(c.value)).Interface()
-				err := decode(testValue.([]byte), recordValue)
+				err := s.decode(testValue.([]byte), recordValue)
 				if err != nil {
 					return false, err
 				}
@@ -465,6 +466,7 @@ func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interfa
 		fnVal := reflect.ValueOf(c.value)
 		fnType := reflect.TypeOf(c.value)
 		ra := &RecordAccess{
+			s:      s,
 			field:  recordValue,
 			record: currentRow,
 			tx:     c.query.tx,
@@ -575,9 +577,10 @@ func (c *Criterion) test(testValue interface{}, encoded bool, currentRow interfa
 	}
 }
 
-func matchesAllCriteria(criteria []*Criterion, value interface{}, encoded bool, currentRow interface{}) (bool, error) {
+func matchesAllCriteria(s *Store, criteria []*Criterion, value interface{}, encoded bool,
+	currentRow interface{}) (bool, error) {
 	for i := range criteria {
-		ok, err := criteria[i].test(value, encoded, currentRow)
+		ok, err := criteria[i].test(s, value, encoded, currentRow)
 		if err != nil {
 			return false, err
 		}

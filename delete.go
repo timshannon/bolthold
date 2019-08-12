@@ -24,8 +24,8 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := newStorer(dataType)
-	gk, err := encode(key)
+	storer := s.newStorer(dataType)
+	gk, err := s.encode(key)
 
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 
 	bVal := b.Get(gk)
 
-	err = decode(bVal, value)
+	err = s.decode(bVal, value)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (s *Store) TxDelete(tx *bolt.Tx, key, dataType interface{}) error {
 	}
 
 	// remove any indexes
-	return indexDelete(storer, tx, gk, value)
+	return s.indexDelete(storer, tx, gk, value)
 }
 
 // DeleteMatching deletes all of the records that match the passed in query
@@ -65,5 +65,5 @@ func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
 
 // TxDeleteMatching does the same as DeleteMatching, but allows you to specify your own transaction
 func (s *Store) TxDeleteMatching(tx *bolt.Tx, dataType interface{}, query *Query) error {
-	return deleteQuery(tx, dataType, query)
+	return s.deleteQuery(tx, dataType, query)
 }

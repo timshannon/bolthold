@@ -45,7 +45,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := newStorer(data)
+	storer := s.newStorer(data)
 
 	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
 	if err != nil {
@@ -59,7 +59,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		}
 	}
 
-	gk, err := encode(key)
+	gk, err := s.encode(key)
 
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 		return ErrKeyExists
 	}
 
-	value, err := encode(data)
+	value, err := s.encode(data)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	}
 
 	// insert any indexes
-	err = indexAdd(storer, tx, gk, data)
+	err = s.indexAdd(storer, tx, gk, data)
 	if err != nil {
 		return err
 	}
@@ -131,9 +131,9 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := newStorer(data)
+	storer := s.newStorer(data)
 
-	gk, err := encode(key)
+	gk, err := s.encode(key)
 
 	if err != nil {
 		return err
@@ -153,17 +153,17 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	// delete any existing indexes
 	existingVal := reflect.New(reflect.TypeOf(data)).Interface()
 
-	err = decode(existing, existingVal)
+	err = s.decode(existing, existingVal)
 	if err != nil {
 		return err
 	}
 
-	err = indexDelete(storer, tx, gk, existingVal)
+	err = s.indexDelete(storer, tx, gk, existingVal)
 	if err != nil {
 		return err
 	}
 
-	value, err := encode(data)
+	value, err := s.encode(data)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	return indexAdd(storer, tx, gk, data)
+	return s.indexAdd(storer, tx, gk, data)
 }
 
 // Upsert inserts the record into the bolthold if it doesn't exist.  If it does already exist, then it updates
@@ -192,9 +192,9 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return bolt.ErrTxNotWritable
 	}
 
-	storer := newStorer(data)
+	storer := s.newStorer(data)
 
-	gk, err := encode(key)
+	gk, err := s.encode(key)
 
 	if err != nil {
 		return err
@@ -212,19 +212,19 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		// delete any existing indexes
 		existingVal := reflect.New(reflect.TypeOf(data)).Interface()
 
-		err = decode(existing, existingVal)
+		err = s.decode(existing, existingVal)
 		if err != nil {
 			return err
 		}
 
-		err = indexDelete(storer, tx, gk, existingVal)
+		err = s.indexDelete(storer, tx, gk, existingVal)
 		if err != nil {
 			return err
 		}
 
 	}
 
-	value, err := encode(data)
+	value, err := s.encode(data)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	return indexAdd(storer, tx, gk, data)
+	return s.indexAdd(storer, tx, gk, data)
 }
 
 // UpdateMatching runs the update function for every record that match the passed in query
@@ -249,5 +249,5 @@ func (s *Store) UpdateMatching(dataType interface{}, query *Query, update func(r
 
 // TxUpdateMatching does the same as UpdateMatching, but allows you to specify your own transaction
 func (s *Store) TxUpdateMatching(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
-	return updateQuery(tx, dataType, query, update)
+	return s.updateQuery(tx, dataType, query, update)
 }

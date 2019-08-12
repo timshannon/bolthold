@@ -22,9 +22,9 @@ func (s *Store) Get(key, result interface{}) error {
 
 // TxGet allows you to pass in your own bolt transaction to retrieve a value from the bolthold and puts it into result
 func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
-	storer := newStorer(result)
+	storer := s.newStorer(result)
 
-	gk, err := encode(key)
+	gk, err := s.encode(key)
 
 	if err != nil {
 		return err
@@ -40,7 +40,7 @@ func (s *Store) TxGet(tx *bolt.Tx, key, result interface{}) error {
 		return ErrNotFound
 	}
 
-	return decode(value, result)
+	return s.decode(value, result)
 }
 
 // Find retrieves a set of values from the bolthold that matches the passed in query
@@ -55,7 +55,7 @@ func (s *Store) Find(result interface{}, query *Query) error {
 
 // TxFind allows you to pass in your own bolt transaction to retrieve a set of values from the bolthold
 func (s *Store) TxFind(tx *bolt.Tx, result interface{}, query *Query) error {
-	return findQuery(tx, result, query)
+	return s.findQuery(tx, result, query)
 }
 
 // FindOne returns a single record, and so result is NOT a slice, but an pointer to a struct, if no record is found
@@ -68,7 +68,7 @@ func (s *Store) FindOne(result interface{}, query *Query) error {
 
 // TxFindOne allows you to pass in your own bolt transaction to retrieve a single record from the bolthold
 func (s *Store) TxFindOne(tx *bolt.Tx, result interface{}, query *Query) error {
-	return findOneQuery(tx, result, query)
+	return s.findOneQuery(tx, result, query)
 }
 
 // Count returns the current record count for the passed in datatype
@@ -84,5 +84,5 @@ func (s *Store) Count(dataType interface{}, query *Query) (int, error) {
 
 // TxCount returns the current record count from within the given transaction for the passed in datatype
 func (s *Store) TxCount(tx *bolt.Tx, dataType interface{}, query *Query) (int, error) {
-	return countQuery(tx, dataType, query)
+	return s.countQuery(tx, dataType, query)
 }

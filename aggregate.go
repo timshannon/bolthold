@@ -179,8 +179,9 @@ func (s *Store) FindAggregate(dataType interface{}, query *Query, groupBy ...str
 
 // TxFindAggregate is the same as FindAggregate, but you specify your own transaction
 // groupBy is optional
-func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query, groupBy ...string) ([]*AggregateResult, error) {
-	return aggregateQuery(tx, dataType, query, groupBy...)
+func (s *Store) TxFindAggregate(tx *bolt.Tx, dataType interface{}, query *Query,
+	groupBy ...string) ([]*AggregateResult, error) {
+	return s.aggregateQuery(tx, dataType, query, groupBy...)
 }
 
 func tryFloat(val reflect.Value) float64 {

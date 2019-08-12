@@ -15,9 +15,6 @@ type EncodeFunc func(value interface{}) ([]byte, error)
 // DecodeFunc is a function for decoding a value from bytes
 type DecodeFunc func(data []byte, value interface{}) error
 
-var encode EncodeFunc
-var decode DecodeFunc
-
 // DefaultEncode is the default encoding func for bolthold (Gob)
 func DefaultEncode(value interface{}) ([]byte, error) {
 	var buff bytes.Buffer
