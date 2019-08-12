@@ -53,7 +53,7 @@ func TestRemoveIndex(t *testing.T) {
 
 		err := store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
-				return fmt.Errorf("Index %s doesn't exist!", iName)
+				return fmt.Errorf("index %s doesn't exist", iName)
 			}
 			return nil
 		})
@@ -69,7 +69,7 @@ func TestRemoveIndex(t *testing.T) {
 
 		err = store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) != nil {
-				return fmt.Errorf("Index %s wasn't removed!", iName)
+				return fmt.Errorf("index %s wasn't removed", iName)
 			}
 			return nil
 		})
@@ -94,7 +94,7 @@ func TestReIndex(t *testing.T) {
 
 		err = store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) != nil {
-				return fmt.Errorf("Index %s wasn't removed!", iName)
+				return fmt.Errorf("index %s wasn't removed", iName)
 			}
 			return nil
 		})
@@ -109,7 +109,7 @@ func TestReIndex(t *testing.T) {
 
 		err = store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
-				return fmt.Errorf("Index %s wasn't rebuilt!", iName)
+				return fmt.Errorf("index %s wasn't rebuilt", iName)
 			}
 			return nil
 		})
@@ -126,7 +126,7 @@ func TestIndexExists(t *testing.T) {
 		insertTestData(t, store)
 		err := store.Bolt().View(func(tx *bolt.Tx) error {
 			if !store.IndexExists(tx, "ItemTest", "Category") {
-				return fmt.Errorf("Index %s doesn't exist!", "ItemTest:Category")
+				return fmt.Errorf("index %s doesn't exist", "ItemTest:Category")
 			}
 			return nil
 		})
@@ -155,7 +155,7 @@ func TestReIndexWithCopy(t *testing.T) {
 
 		err = store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
-				return fmt.Errorf("Index %s wasn't rebuilt!", iName)
+				return fmt.Errorf("index %s wasn't rebuilt", iName)
 			}
 			return nil
 		})
@@ -187,6 +187,65 @@ func TestAlternateEncoding(t *testing.T) {
 	var result []ItemTest
 
 	store.Find(&result, bolthold.Where(bolthold.Key).Eq(tData.Key))
+
+	if len(result) != 1 {
+		if testing.Verbose() {
+			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+		}
+		t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+	}
+
+	if !result[0].equal(&tData) {
+		t.Fatalf("Results not equal! Wanted %v, got %v", tData, result[0])
+	}
+
+}
+
+func TestPerStoreEncoding(t *testing.T) {
+	jsnFilename := tempfile()
+	jsnStore, err := bolthold.Open(jsnFilename, 0666, &bolthold.Options{
+		Encoder: json.Marshal,
+		Decoder: json.Unmarshal,
+	})
+	defer jsnStore.Close()
+	defer os.Remove(jsnFilename)
+
+	if err != nil {
+		t.Fatalf("Error opening %s: %s", jsnFilename, err)
+	}
+
+	gobFilename := tempfile()
+	gobStore, err := bolthold.Open(gobFilename, 0666, &bolthold.Options{})
+	defer gobStore.Close()
+	defer os.Remove(gobFilename)
+
+	if err != nil {
+		t.Fatalf("Error opening %s: %s", gobFilename, err)
+	}
+
+	insertTestData(t, jsnStore)
+	insertTestData(t, gobStore)
+
+	tData := testData[3]
+
+	var result []ItemTest
+
+	jsnStore.Find(&result, bolthold.Where(bolthold.Key).Eq(tData.Key))
+
+	if len(result) != 1 {
+		if testing.Verbose() {
+			t.Fatalf("Find result count is %d wanted %d.  Results: %v", len(result), 1, result)
+		}
+		t.Fatalf("Find result count is %d wanted %d.", len(result), 1)
+	}
+
+	if !result[0].equal(&tData) {
+		t.Fatalf("Results not equal! Wanted %v, got %v", tData, result[0])
+	}
+
+	result = []ItemTest{}
+
+	gobStore.Find(&result, bolthold.Where(bolthold.Key).Eq(tData.Key))
 
 	if len(result) != 1 {
 		if testing.Verbose() {

@@ -14,7 +14,9 @@ import (
 
 // Store is a bolthold wrapper around a bolt DB
 type Store struct {
-	db *bolt.DB
+	db     *bolt.DB
+	encode EncodeFunc
+	decode DecodeFunc
 }
 
 // Options allows you set different options from the defaults
@@ -29,16 +31,15 @@ type Options struct {
 func Open(filename string, mode os.FileMode, options *Options) (*Store, error) {
 	options = fillOptions(options)
 
-	encode = options.Encoder
-	decode = options.Decoder
-
 	db, err := bolt.Open(filename, mode, options.Options)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Store{
-		db: db,
+		db:     db,
+		encode: options.Encoder,
+		decode: options.Decoder,
 	}, nil
 }
 
@@ -73,7 +74,7 @@ func (s *Store) Close() error {
 // if bucketName is nil, then we'll assume a bucketName of storer.Type()
 // if a bucketname is specified, then the data will be copied to the bolthold standard bucket of storer.Type()
 func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
-	storer := newStorer(exampleType)
+	storer := s.newStorer(exampleType)
 
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		indexes := storer.Indexes()
@@ -109,11 +110,11 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 					return err
 				}
 			}
-			err := decode(v, exampleType)
+			err := s.decode(v, exampleType)
 			if err != nil {
 				return err
 			}
-			err = indexAdd(storer, tx, k, exampleType)
+			err = s.indexAdd(storer, tx, k, exampleType)
 			if err != nil {
 				return err
 			}
@@ -125,7 +126,7 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 
 // RemoveIndex removes an index from the store.
 func (s *Store) RemoveIndex(dataType interface{}, indexName string) error {
-	storer := newStorer(dataType)
+	storer := s.newStorer(dataType)
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
 		return tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
 
@@ -157,11 +158,11 @@ func (t *anonStorer) Indexes() map[string]Index {
 // newStorer creates a type which satisfies the Storer interface based on reflection of the passed in dataType
 // if the Type doesn't meet the requirements of a Storer (i.e. doesn't have a name) it panics
 // You can avoid any reflection costs, by implementing the Storer interface on a type
-func newStorer(dataType interface{}) Storer {
-	s, ok := dataType.(Storer)
+func (s *Store) newStorer(dataType interface{}) Storer {
+	str, ok := dataType.(Storer)
 
 	if ok {
-		return s
+		return str
 	}
 
 	tp := reflect.TypeOf(dataType)
@@ -197,7 +198,7 @@ func newStorer(dataType interface{}) Storer {
 					tp = tp.Elem()
 				}
 
-				return encode(tp.FieldByName(name).Interface())
+				return s.encode(tp.FieldByName(name).Interface())
 			}
 		}
 	}
