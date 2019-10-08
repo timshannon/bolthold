@@ -58,7 +58,7 @@ func (s *Store) get(source bucketSource, key, result interface{}) error {
 // emptied.
 func (s *Store) Find(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
-		return s.TxFind(tx, result, query)
+		return s.findQuery(tx, result, query)
 	})
 }
 
@@ -85,7 +85,7 @@ func (s *Store) TxFindOne(tx *bolt.Tx, result interface{}, query *Query) error {
 	return s.findOneQuery(tx, result, query)
 }
 
-func (s *Store) TxFindOneInBucket(parent *bolt.Bucket, result interface{}, query *Query) error {
+func (s *Store) FindOneInBucket(parent *bolt.Bucket, result interface{}, query *Query) error {
 	return s.findOneQuery(parent, result, query)
 }
 

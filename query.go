@@ -21,7 +21,7 @@ func (s *Store) runQuery(source bucketSource, dataType interface{}, query *Query
 	storer := s.newStorer(dataType)
 
 	bkt := source.Bucket([]byte(storer.Type()))
-	if bkt == nil || bkt.Stats().KeyN == 0 {
+	if bkt == nil {
 		// if the bucket doesn't exist or is empty then our job is really easy!
 		return nil
 	}
