@@ -16,7 +16,7 @@ var ErrNotFound = errors.New("No data found for this key")
 // Get retrieves a value from bolthold and puts it into result.  Result must be a pointer
 func (s *Store) Get(key, result interface{}) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
-		return s.get(tx, key, result)
+		return s.TxGet(tx, key, result)
 	})
 }
 
@@ -58,7 +58,7 @@ func (s *Store) get(source bucketSource, key, result interface{}) error {
 // emptied.
 func (s *Store) Find(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
-		return s.findQuery(tx, result, query)
+		return s.TxFind(tx, result, query)
 	})
 }
 
@@ -76,7 +76,7 @@ func (s *Store) FindInBucket(parent *bolt.Bucket, result interface{}, query *Que
 // that matches the query, then it returns ErrNotFound
 func (s *Store) FindOne(result interface{}, query *Query) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
-		return s.findOneQuery(tx, result, query)
+		return s.TxFindOne(tx, result, query)
 	})
 }
 
