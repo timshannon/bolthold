@@ -10,8 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
-
-	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -48,7 +46,7 @@ type Query struct {
 
 	badIndex bool
 	dataType reflect.Type
-	tx       *bolt.Tx
+	source   bucketSource
 
 	limit   int
 	skip    int
@@ -382,7 +380,7 @@ type MatchFunc func(ra interface{}) (bool, error)
 // RecordAccess allows access to the current record, field or allows running a subquery within a
 // MatchFunc
 type RecordAccess struct {
-	tx     *bolt.Tx
+	source bucketSource
 	s      *Store
 	record interface{}
 	field  interface{}
@@ -401,13 +399,13 @@ func (r *RecordAccess) Record() interface{} {
 // SubQuery allows you to run another query in the same transaction for each
 // record in a parent query
 func (r *RecordAccess) SubQuery(result interface{}, query *Query) error {
-	return r.s.findQuery(r.tx, result, query)
+	return r.s.findQuery(r.source, result, query)
 }
 
 // SubAggregateQuery allows you to run another aggregate query in the same transaction for each
 // record in a parent query
 func (r *RecordAccess) SubAggregateQuery(query *Query, groupBy ...string) ([]*AggregateResult, error) {
-	return r.s.aggregateQuery(r.tx, r.record, query, groupBy...)
+	return r.s.aggregateQuery(r.source, r.record, query, groupBy...)
 }
 
 // MatchFunc will test if a field matches the passed in function
@@ -469,7 +467,7 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 			s:      s,
 			field:  recordValue,
 			record: currentRow,
-			tx:     c.query.tx,
+			source: c.query.source,
 		}
 
 		var out []reflect.Value

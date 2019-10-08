@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-
-	bolt "go.etcd.io/bbolt"
 )
 
 type record struct {
@@ -18,17 +16,17 @@ type record struct {
 	value reflect.Value
 }
 
-func (s *Store) runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrievedKeys keyList, skip int,
+func (s *Store) runQuery(source bucketSource, dataType interface{}, query *Query, retrievedKeys keyList, skip int,
 	action func(r *record) error) error {
 	storer := s.newStorer(dataType)
 
-	bkt := tx.Bucket([]byte(storer.Type()))
+	bkt := source.Bucket([]byte(storer.Type()))
 	if bkt == nil || bkt.Stats().KeyN == 0 {
 		// if the bucket doesn't exist or is empty then our job is really easy!
 		return nil
 	}
 
-	if query.index != "" && tx.Bucket(indexBucketName(storer.Type(), query.index)) == nil {
+	if query.index != "" && source.Bucket(indexBucketName(storer.Type(), query.index)) == nil {
 		return fmt.Errorf("The index %s does not exist", query.index)
 	}
 
@@ -41,10 +39,10 @@ func (s *Store) runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrie
 	query.dataType = reflect.TypeOf(tp)
 
 	if len(query.sort) > 0 {
-		return s.runQuerySort(tx, dataType, query, action)
+		return s.runQuerySort(source, dataType, query, action)
 	}
 
-	iter := s.newIterator(tx, storer.Type(), query)
+	iter := s.newIterator(source, storer.Type(), query)
 
 	newKeys := make(keyList, 0)
 
@@ -65,7 +63,7 @@ func (s *Store) runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrie
 			return err
 		}
 
-		query.tx = tx
+		query.source = source
 
 		ok, err := query.matchesAllFields(s, k, val, val.Interface())
 		if err != nil {
@@ -113,7 +111,7 @@ func (s *Store) runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrie
 		}
 
 		for i := range query.ors {
-			err := s.runQuery(tx, tp, query.ors[i], retrievedKeys, skip, action)
+			err := s.runQuery(source, tp, query.ors[i], retrievedKeys, skip, action)
 			if err != nil {
 				return err
 			}
@@ -124,7 +122,7 @@ func (s *Store) runQuery(tx *bolt.Tx, dataType interface{}, query *Query, retrie
 }
 
 // runQuerySort runs the query without sort, skip, or limit, then applies them to the entire result set
-func (s *Store) runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, action func(r *record) error) error {
+func (s *Store) runQuerySort(source bucketSource, dataType interface{}, query *Query, action func(r *record) error) error {
 	// Validate sort fields
 	for _, field := range query.sort {
 		fields := strings.Split(field, ".")
@@ -154,7 +152,7 @@ func (s *Store) runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, ac
 	qCopy.skip = 0
 
 	var records []*record
-	err := s.runQuery(tx, dataType, &qCopy, nil, 0,
+	err := s.runQuery(source, dataType, &qCopy, nil, 0,
 		func(r *record) error {
 			records = append(records, r)
 
@@ -232,7 +230,7 @@ func (s *Store) runQuerySort(tx *bolt.Tx, dataType interface{}, query *Query, ac
 
 }
 
-func (s *Store) findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
+func (s *Store) findQuery(source bucketSource, result interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -265,7 +263,7 @@ func (s *Store) findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 
 	val := reflect.New(tp)
 
-	err := s.runQuery(tx, val.Interface(), query, nil, query.skip,
+	err := s.runQuery(source, val.Interface(), query, nil, query.skip,
 		func(r *record) error {
 			var rowValue reflect.Value
 
@@ -301,14 +299,14 @@ func (s *Store) findQuery(tx *bolt.Tx, result interface{}, query *Query) error {
 	return nil
 }
 
-func (s *Store) deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) error {
+func (s *Store) deleteQuery(source bucketSource, dataType interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
 
 	var records []*record
 
-	err := s.runQuery(tx, dataType, query, nil, query.skip,
+	err := s.runQuery(source, dataType, query, nil, query.skip,
 		func(r *record) error {
 			records = append(records, r)
 
@@ -321,7 +319,7 @@ func (s *Store) deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) err
 
 	storer := s.newStorer(dataType)
 
-	b := tx.Bucket([]byte(storer.Type()))
+	b := source.Bucket([]byte(storer.Type()))
 	for i := range records {
 		err := b.Delete(records[i].key)
 		if err != nil {
@@ -329,7 +327,7 @@ func (s *Store) deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) err
 		}
 
 		// remove any indexes
-		err = s.indexDelete(storer, tx, records[i].key, records[i].value.Interface())
+		err = s.indexDelete(storer, source, records[i].key, records[i].value.Interface())
 		if err != nil {
 			return err
 		}
@@ -338,14 +336,14 @@ func (s *Store) deleteQuery(tx *bolt.Tx, dataType interface{}, query *Query) err
 	return nil
 }
 
-func (s *Store) updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
+func (s *Store) updateQuery(source bucketSource, dataType interface{}, query *Query, update func(record interface{}) error) error {
 	if query == nil {
 		query = &Query{}
 	}
 
 	var records []*record
 
-	err := s.runQuery(tx, dataType, query, nil, query.skip,
+	err := s.runQuery(source, dataType, query, nil, query.skip,
 		func(r *record) error {
 			records = append(records, r)
 
@@ -358,13 +356,13 @@ func (s *Store) updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, upd
 	}
 
 	storer := s.newStorer(dataType)
-	b := tx.Bucket([]byte(storer.Type()))
+	b := source.Bucket([]byte(storer.Type()))
 
 	for i := range records {
 		upVal := records[i].value.Interface()
 
 		// delete any existing indexes bad on original value
-		err := s.indexDelete(storer, tx, records[i].key, upVal)
+		err := s.indexDelete(storer, source, records[i].key, upVal)
 		if err != nil {
 			return err
 		}
@@ -385,7 +383,7 @@ func (s *Store) updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, upd
 		}
 
 		// insert any new indexes
-		err = s.indexAdd(storer, tx, records[i].key, upVal)
+		err = s.indexAdd(storer, source, records[i].key, upVal)
 		if err != nil {
 			return err
 		}
@@ -394,7 +392,7 @@ func (s *Store) updateQuery(tx *bolt.Tx, dataType interface{}, query *Query, upd
 	return nil
 }
 
-func (s *Store) aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query,
+func (s *Store) aggregateQuery(source bucketSource, dataType interface{}, query *Query,
 	groupBy ...string) ([]*AggregateResult, error) {
 	if query == nil {
 		query = &Query{}
@@ -406,7 +404,7 @@ func (s *Store) aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query,
 		result = append(result, &AggregateResult{})
 	}
 
-	err := s.runQuery(tx, dataType, query, nil, query.skip,
+	err := s.runQuery(source, dataType, query, nil, query.skip,
 		func(r *record) error {
 			if len(groupBy) == 0 {
 				result[0].reduction = append(result[0].reduction, r.value)
@@ -473,14 +471,14 @@ func (s *Store) aggregateQuery(tx *bolt.Tx, dataType interface{}, query *Query,
 	return result, nil
 }
 
-func (s *Store) countQuery(tx *bolt.Tx, dataType interface{}, query *Query) (int, error) {
+func (s *Store) countQuery(source bucketSource, dataType interface{}, query *Query) (int, error) {
 	if query == nil {
 		query = &Query{}
 	}
 
 	count := 0
 
-	err := s.runQuery(tx, dataType, query, nil, query.skip,
+	err := s.runQuery(source, dataType, query, nil, query.skip,
 		func(r *record) error {
 			count++
 			return nil
@@ -493,7 +491,7 @@ func (s *Store) countQuery(tx *bolt.Tx, dataType interface{}, query *Query) (int
 	return count, nil
 }
 
-func (s *Store) findOneQuery(tx *bolt.Tx, result interface{}, query *Query) error {
+func (s *Store) findOneQuery(source bucketSource, result interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -522,7 +520,7 @@ func (s *Store) findOneQuery(tx *bolt.Tx, result interface{}, query *Query) erro
 
 	found := false
 
-	err := s.runQuery(tx, result, query, nil, query.skip,
+	err := s.runQuery(source, result, query, nil, query.skip,
 		func(r *record) error {
 			found = true
 
