@@ -43,6 +43,40 @@ func testWrapWithBucket(t *testing.T, tests func(store *bolthold.Store, bucket *
 	}
 }
 
+func testWrapWithReadOnlyBucket(t *testing.T, tests func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T)) {
+	filename := tempfile()
+	store, err := bolthold.Open(filename, 0666, nil)
+	if err != nil {
+		t.Fatalf("Error opening %s: %s", filename, err)
+	}
+
+	if store == nil {
+		t.Fatalf("store is null!")
+	}
+
+	defer store.Close()
+	defer os.Remove(filename)
+
+	var bucket *bolt.Bucket
+	err = store.Bolt().Update(func(tx *bolt.Tx) error {
+		bucket, err = tx.CreateBucketIfNotExists([]byte("test bucket parent"))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Error creating bucket %s: %s", filename, err)
+	}
+	err = store.Bolt().View(func(tx *bolt.Tx) error {
+		bucket = tx.Bucket([]byte("test bucket parent"))
+
+		tests(store, bucket, t)
+		return nil
+	})
+}
+
 func TestGetFromBucket(t *testing.T) {
 	testWrapWithBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
 		key := "testKey"
@@ -201,6 +235,25 @@ func TestInsertBucket(t *testing.T) {
 	})
 }
 
+func TestInsertBucketReadTxn(t *testing.T) {
+	testWrapWithReadOnlyBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.InsertIntoBucket(bucket, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Inserting into a read only transaction didn't fail!")
+		}
+	})
+}
+
 func TestUpdateBucket(t *testing.T) {
 	testWrapWithBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
 		key := "testKey"
@@ -255,6 +308,25 @@ func TestUpdateBucket(t *testing.T) {
 	})
 }
 
+func TestUpdateBucketReadTxn(t *testing.T) {
+	testWrapWithReadOnlyBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.UpdateBucket(bucket, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Updating into a read only transaction didn't fail!")
+		}
+	})
+}
+
 func TestUpsertBucket(t *testing.T) {
 	testWrapWithBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
 		key := "testKey"
@@ -300,6 +372,25 @@ func TestUpsertBucket(t *testing.T) {
 
 		if !result.equal(update) {
 			t.Fatalf("Upsert didn't complete.  Expected %v, got %v", update, result)
+		}
+	})
+}
+
+func TestUpsertBucketReadTxn(t *testing.T) {
+	testWrapWithReadOnlyBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:     "Test Name",
+			Category: "Test Category",
+			Created:  time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.UpsertBucket(bucket, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Updating into a read only transaction didn't fail!")
 		}
 	})
 }
@@ -395,6 +486,24 @@ func TestDeleteBucket(t *testing.T) {
 			t.Fatalf("Data was not deleted from bolthold")
 		}
 
+	})
+}
+
+func TestDeleteBucketReadTxn(t *testing.T) {
+	testWrapWithReadOnlyBucket(t, func(store *bolthold.Store, bucket *bolt.Bucket, t *testing.T) {
+		key := "testKey"
+		data := &ItemTest{
+			Name:    "Test Name",
+			Created: time.Now(),
+		}
+
+		err := store.Bolt().View(func(tx *bolt.Tx) error {
+			return store.DeleteFromBucket(bucket, key, data)
+		})
+
+		if err == nil {
+			t.Fatalf("Deleting from a read only transaction didn't fail!")
+		}
 	})
 }
 

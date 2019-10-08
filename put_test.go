@@ -68,6 +68,13 @@ func TestInsertReadTxn(t *testing.T) {
 			t.Fatalf("Inserting into a read only transaction didn't fail!")
 		}
 
+		err = store.Bolt().Update(func(tx *bolt.Tx) error {
+			return store.TxInsert(tx, key, data)
+		})
+		if err != nil {
+			t.Fatalf("Inserting into a writable transaction failed: %s", err)
+		}
+
 	})
 }
 
@@ -143,6 +150,19 @@ func TestUpdateReadTxn(t *testing.T) {
 			t.Fatalf("Updating into a read only transaction didn't fail!")
 		}
 
+		err = store.Bolt().Update(func(tx *bolt.Tx) error {
+
+			err = store.TxInsert(tx, key, data)
+			if err != nil {
+				t.Fatalf("Inserting into a writable transaction failed: %s", err)
+			}
+
+			return store.TxUpdate(tx, key, data)
+		})
+
+		if err != nil {
+			t.Fatalf("Updating into a writable transaction failed: %s", err)
+		}
 	})
 }
 
@@ -210,6 +230,13 @@ func TestUpsertReadTxn(t *testing.T) {
 
 		if err == nil {
 			t.Fatalf("Updating into a read only transaction didn't fail!")
+		}
+		err = store.Bolt().Update(func(tx *bolt.Tx) error {
+			return store.TxUpsert(tx, key, data)
+		})
+
+		if err != nil {
+			t.Fatalf("Updating into a read only transaction failed: %s", err)
 		}
 
 	})

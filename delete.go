@@ -70,7 +70,7 @@ func (s *Store) delete(source bucketSource, key, dataType interface{}) error {
 // DeleteMatching deletes all of the records that match the passed in query
 func (s *Store) DeleteMatching(dataType interface{}, query *Query) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
-		return s.deleteQuery(tx, dataType, query)
+		return s.TxDeleteMatching(tx, dataType, query)
 	})
 }
 
