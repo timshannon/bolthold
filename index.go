@@ -24,10 +24,10 @@ const iteratorKeyMinCacheSize = 100
 type Index func(name string, value interface{}) ([]byte, error)
 
 // adds an item to the index
-func (s *Store) indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{}) error {
+func (s *Store) indexAdd(storer Storer, source bucketSource, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, tx, key, data, false)
+		err := s.indexUpdate(storer.Type(), name, index, source, key, data, false)
 		if err != nil {
 			return err
 		}
@@ -38,11 +38,11 @@ func (s *Store) indexAdd(storer Storer, tx *bolt.Tx, key []byte, data interface{
 
 // removes an item from the index
 // be sure to pass the data from the old record, not the new one
-func (s *Store) indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData interface{}) error {
+func (s *Store) indexDelete(storer Storer, source bucketSource, key []byte, originalData interface{}) error {
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, tx, key, originalData, true)
+		err := s.indexUpdate(storer.Type(), name, index, source, key, originalData, true)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (s *Store) indexDelete(storer Storer, tx *bolt.Tx, key []byte, originalData
 }
 
 // adds or removes a specific index on an item
-func (s *Store) indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx, key []byte, value interface{},
+func (s *Store) indexUpdate(typeName, indexName string, index Index, source bucketSource, key []byte, value interface{},
 	delete bool) error {
 	indexKey, err := index(indexName, value)
 	if indexKey == nil {
@@ -65,7 +65,7 @@ func (s *Store) indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx
 		return err
 	}
 
-	b, err := tx.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
+	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
 	if err != nil {
 		return err
 	}
@@ -97,8 +97,8 @@ func (s *Store) indexUpdate(typeName, indexName string, index Index, tx *bolt.Tx
 }
 
 // IndexExists tests if an index exists for the passed in field name
-func (s *Store) IndexExists(tx *bolt.Tx, typeName, indexName string) bool {
-	return (tx.Bucket(indexBucketName(typeName, indexName)) != nil)
+func (s *Store) IndexExists(source bucketSource, typeName, indexName string) bool {
+	return (source.Bucket(indexBucketName(typeName, indexName)) != nil)
 }
 
 // indexBucketName returns the name of the bolt bucket where this index is stored
@@ -153,10 +153,10 @@ type iterator struct {
 	err         error
 }
 
-func (s *Store) newIterator(tx *bolt.Tx, typeName string, query *Query) *iterator {
+func (s *Store) newIterator(source bucketSource, typeName string, query *Query) *iterator {
 
 	iter := &iterator{
-		dataBucket: tx.Bucket([]byte(typeName)),
+		dataBucket: source.Bucket([]byte(typeName)),
 		prepCursor: true,
 	}
 
@@ -168,7 +168,7 @@ func (s *Store) newIterator(tx *bolt.Tx, typeName string, query *Query) *iterato
 
 	//   Key field
 	if query.index == Key && !query.badIndex {
-		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
+		iter.indexCursor = source.Bucket([]byte(typeName)).Cursor()
 
 		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
 			var nKeys [][]byte
@@ -209,14 +209,14 @@ func (s *Store) newIterator(tx *bolt.Tx, typeName string, query *Query) *iterato
 
 	var iBucket *bolt.Bucket
 	if !query.badIndex {
-		iBucket = tx.Bucket(indexBucketName(typeName, query.index))
+		iBucket = source.Bucket(indexBucketName(typeName, query.index))
 	}
 
 	if iBucket == nil || hasMatchFunc(criteria) {
 		// bad index or matches Function on indexed field, filter through entire store
 		query.badIndex = true
 
-		iter.indexCursor = tx.Bucket([]byte(typeName)).Cursor()
+		iter.indexCursor = source.Bucket([]byte(typeName)).Cursor()
 
 		iter.nextKeys = func(prepCursor bool, cursor *bolt.Cursor) ([][]byte, error) {
 			var nKeys [][]byte

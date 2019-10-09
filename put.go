@@ -35,7 +35,7 @@ func NextSequence() interface{} {
 // To use this with bolthold.NextSequence() use a type of `uint64` for the key field.
 func (s *Store) Insert(key, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
-		return s.TxInsert(tx, key, data)
+		return s.insert(tx, key, data)
 	})
 }
 
@@ -44,10 +44,21 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	if !tx.Writable() {
 		return bolt.ErrTxNotWritable
 	}
+	return s.insert(tx, key, data)
+}
 
+// InsertIntoBucket is the same as Insert except it allows you specify your own parent bucket
+func (s *Store) InsertIntoBucket(parent *bolt.Bucket, key, data interface{}) error {
+	if !parent.Tx().Writable() {
+		return bolt.ErrTxNotWritable
+	}
+	return s.insert(parent, key, data)
+}
+
+func (s *Store) insert(source bucketSource, key, data interface{}) error {
 	storer := s.newStorer(data)
 
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	b, err := source.CreateBucketIfNotExists([]byte(storer.Type()))
 	if err != nil {
 		return err
 	}
@@ -82,7 +93,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 	}
 
 	// insert any indexes
-	err = s.indexAdd(storer, tx, gk, data)
+	err = s.indexAdd(storer, source, gk, data)
 	if err != nil {
 		return err
 	}
@@ -121,7 +132,7 @@ func (s *Store) TxInsert(tx *bolt.Tx, key, data interface{}) error {
 // if the Key doesn't already exist in the store, then it fails with ErrNotFound
 func (s *Store) Update(key interface{}, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
-		return s.TxUpdate(tx, key, data)
+		return s.update(tx, key, data)
 	})
 }
 
@@ -130,7 +141,19 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	if !tx.Writable() {
 		return bolt.ErrTxNotWritable
 	}
+	return s.update(tx, key, data)
+}
 
+// UpdateBucket allows you to run an update against any parent bucket
+func (s *Store) UpdateBucket(parent *bolt.Bucket, key interface{}, data interface{}) error {
+	if !parent.Tx().Writable() {
+		return bolt.ErrTxNotWritable
+	}
+	return s.update(parent, key, data)
+
+}
+
+func (s *Store) update(source bucketSource, key interface{}, data interface{}) error {
 	storer := s.newStorer(data)
 
 	gk, err := s.encode(key)
@@ -139,7 +162,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	b, err := source.CreateBucketIfNotExists([]byte(storer.Type()))
 	if err != nil {
 		return err
 	}
@@ -158,7 +181,7 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	err = s.indexDelete(storer, tx, gk, existingVal)
+	err = s.indexDelete(storer, source, gk, existingVal)
 	if err != nil {
 		return err
 	}
@@ -175,14 +198,14 @@ func (s *Store) TxUpdate(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	return s.indexAdd(storer, tx, gk, data)
+	return s.indexAdd(storer, source, gk, data)
 }
 
 // Upsert inserts the record into the bolthold if it doesn't exist.  If it does already exist, then it updates
 // the existing record
 func (s *Store) Upsert(key interface{}, data interface{}) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
-		return s.TxUpsert(tx, key, data)
+		return s.upsert(tx, key, data)
 	})
 }
 
@@ -191,7 +214,18 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	if !tx.Writable() {
 		return bolt.ErrTxNotWritable
 	}
+	return s.upsert(tx, key, data)
+}
 
+// UpsertBucket allows you to run an upsert against any bucket parent
+func (s *Store) UpsertBucket(parent *bolt.Bucket, key interface{}, data interface{}) error {
+	if !parent.Tx().Writable() {
+		return bolt.ErrTxNotWritable
+	}
+	return s.upsert(parent, key, data)
+}
+
+func (s *Store) upsert(source bucketSource, key interface{}, data interface{}) error {
 	storer := s.newStorer(data)
 
 	gk, err := s.encode(key)
@@ -200,7 +234,7 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 		return err
 	}
 
-	b, err := tx.CreateBucketIfNotExists([]byte(storer.Type()))
+	b, err := source.CreateBucketIfNotExists([]byte(storer.Type()))
 	if err != nil {
 		return err
 	}
@@ -217,7 +251,7 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 			return err
 		}
 
-		err = s.indexDelete(storer, tx, gk, existingVal)
+		err = s.indexDelete(storer, source, gk, existingVal)
 		if err != nil {
 			return err
 		}
@@ -236,18 +270,25 @@ func (s *Store) TxUpsert(tx *bolt.Tx, key interface{}, data interface{}) error {
 	}
 
 	// insert any new indexes
-	return s.indexAdd(storer, tx, gk, data)
+	return s.indexAdd(storer, source, gk, data)
 }
 
 // UpdateMatching runs the update function for every record that match the passed in query
 // Note that the type  of record in the update func always has to be a pointer
 func (s *Store) UpdateMatching(dataType interface{}, query *Query, update func(record interface{}) error) error {
 	return s.Bolt().Update(func(tx *bolt.Tx) error {
-		return s.TxUpdateMatching(tx, dataType, query, update)
+		return s.updateQuery(tx, dataType, query, update)
 	})
 }
 
 // TxUpdateMatching does the same as UpdateMatching, but allows you to specify your own transaction
-func (s *Store) TxUpdateMatching(tx *bolt.Tx, dataType interface{}, query *Query, update func(record interface{}) error) error {
+func (s *Store) TxUpdateMatching(tx *bolt.Tx, dataType interface{}, query *Query,
+	update func(record interface{}) error) error {
 	return s.updateQuery(tx, dataType, query, update)
+}
+
+// UpdateMatchingInBucket does the same as UpdateMatching, but allows you to specify your own parent bucket
+func (s *Store) UpdateMatchingInBucket(parent *bolt.Bucket, dataType interface{}, query *Query,
+	update func(record interface{}) error) error {
+	return s.updateQuery(parent, dataType, query, update)
 }

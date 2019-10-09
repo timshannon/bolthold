@@ -205,3 +205,8 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 
 	return storer
 }
+
+type bucketSource interface {
+	Bucket(name []byte) *bolt.Bucket
+	CreateBucketIfNotExists(name []byte) (*bolt.Bucket, error)
+}

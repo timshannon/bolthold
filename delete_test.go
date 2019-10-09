@@ -144,6 +144,17 @@ func TestDeleteReadTxn(t *testing.T) {
 			t.Fatalf("Deleting from a read only transaction didn't fail!")
 		}
 
+		err = store.Bolt().Update(func(tx *bolt.Tx) error {
+			err = store.TxInsert(tx, key, data)
+			if err != nil {
+				t.Fatalf("Inserting into a writable transaction failed: %s", err)
+			}
+			return store.TxDelete(tx, key, data)
+		})
+
+		if err != nil {
+			t.Fatalf("Deleting from a writable transaction failed: %s", err)
+		}
 	})
 }
 
