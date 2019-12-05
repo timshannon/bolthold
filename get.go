@@ -109,3 +109,21 @@ func (s *Store) TxCount(tx *bolt.Tx, dataType interface{}, query *Query) (int, e
 func (s *Store) CountInBucket(parent *bolt.Bucket, dataType interface{}, query *Query) (int, error) {
 	return s.countQuery(parent, dataType, query)
 }
+
+// ForEach runs the function fn against every record that matches the query
+// Useful for when working with large sets of data that you don't want to hold the entire result
+// set in memory, similar to database cursors
+// Return an error from fn, will stop the cursor from iterating
+func (s *Store) ForEach(dataType interface{}, query *Query, fn func(record interface{}) error) error {
+	return s.Bolt().View(func(tx *bolt.Tx) error {
+		return s.TxForEach(tx, dataType, query, fn)
+	})
+}
+
+func (s *Store) TxForEach(tx *bolt.Tx, dataType interface{}, query *Query, fn func(record interface{}) error) error {
+	return s.forEach(tx, dataType, query, fn)
+}
+
+func (s *Store) ForEachInBucket(parent *bolt.Bucket, dataType interface{}, query *Query, fn func(record interface{}) error) error {
+	return s.forEach(parent, dataType, query, fn)
+}

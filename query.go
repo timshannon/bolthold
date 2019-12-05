@@ -550,3 +550,14 @@ func (s *Store) findOneQuery(source bucketSource, result interface{}, query *Que
 
 	return nil
 }
+
+func (s *Store) forEach(source bucketSource, dataType interface{}, query *Query, fn func(record interface{}) error) error {
+	if query == nil {
+		query = &Query{}
+	}
+
+	return s.runQuery(source, dataType, query, nil, query.skip,
+		func(r *record) error {
+			return fn(r.value.Interface())
+		})
+}
