@@ -234,6 +234,23 @@ where := bolthold.Where("Id").In(bolthold.Slice(t)...)
 
 ```
 
+### ForEach
+
+When working with large datasets, you may not want to have to store the entire dataset in memory.  It's be much more
+efficient to work with a single record at a time rather than grab all the records and loop through them, which is
+what cursors are used for in databases.  In BoltHold you can accomplish the same thing by calling ForEach:
+
+```Go
+err := store.ForEach(boltholdWhere("Id").Gt(4), func(record *Item) error {
+	// do stuff with record
+
+	// if you return an error, then the query will stop iterating through records
+
+	return nil
+})
+
+```
+
 ### Aggregate Queries
 
 Aggregate queries are queries that group results by a field.  For example, lets say you had a collection of employees:
