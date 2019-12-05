@@ -17,16 +17,12 @@ func TestForEach(t *testing.T) {
 		for _, tst := range testResults {
 			t.Run(tst.name, func(t *testing.T) {
 				count := 0
-				err := store.ForEach(ItemTest{}, tst.query, func(record interface{}) error {
-					_, ok := record.(*ItemTest)
-					if !ok {
-						return fmt.Errorf("Invalid record type")
-					}
+				err := store.ForEach(tst.query, func(record *ItemTest) error {
 					count++
 
 					found := false
 					for i := range tst.result {
-						if record.(*ItemTest).equal(&testData[tst.result[i]]) {
+						if record.equal(&testData[tst.result[i]]) {
 							found = true
 							break
 						}

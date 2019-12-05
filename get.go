@@ -85,6 +85,7 @@ func (s *Store) TxFindOne(tx *bolt.Tx, result interface{}, query *Query) error {
 	return s.findOneQuery(tx, result, query)
 }
 
+// FindOneInBucket allows you to pass in your own bucket to retrieve a single record from the bolthold
 func (s *Store) FindOneInBucket(parent *bolt.Bucket, result interface{}, query *Query) error {
 	return s.findOneQuery(parent, result, query)
 }
@@ -114,16 +115,18 @@ func (s *Store) CountInBucket(parent *bolt.Bucket, dataType interface{}, query *
 // Useful for when working with large sets of data that you don't want to hold the entire result
 // set in memory, similar to database cursors
 // Return an error from fn, will stop the cursor from iterating
-func (s *Store) ForEach(dataType interface{}, query *Query, fn func(record interface{}) error) error {
+func (s *Store) ForEach(query *Query, fn interface{}) error {
 	return s.Bolt().View(func(tx *bolt.Tx) error {
-		return s.TxForEach(tx, dataType, query, fn)
+		return s.TxForEach(tx, query, fn)
 	})
 }
 
-func (s *Store) TxForEach(tx *bolt.Tx, dataType interface{}, query *Query, fn func(record interface{}) error) error {
-	return s.forEach(tx, dataType, query, fn)
+// TxForEach is the same as ForEach but you get to specify your transaction
+func (s *Store) TxForEach(tx *bolt.Tx, query *Query, fn interface{}) error {
+	return s.forEach(tx, query, fn)
 }
 
-func (s *Store) ForEachInBucket(parent *bolt.Bucket, dataType interface{}, query *Query, fn func(record interface{}) error) error {
-	return s.forEach(parent, dataType, query, fn)
+// ForEachInBucket is the same as ForEach but you get to specify your parent bucket
+func (s *Store) ForEachInBucket(parent *bolt.Bucket, query *Query, fn interface{}) error {
+	return s.forEach(parent, query, fn)
 }

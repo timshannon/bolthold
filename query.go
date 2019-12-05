@@ -551,13 +551,30 @@ func (s *Store) findOneQuery(source bucketSource, result interface{}, query *Que
 	return nil
 }
 
-func (s *Store) forEach(source bucketSource, dataType interface{}, query *Query, fn func(record interface{}) error) error {
+func (s *Store) forEach(source bucketSource, query *Query, fn interface{}) error {
 	if query == nil {
 		query = &Query{}
 	}
 
-	return s.runQuery(source, dataType, query, nil, query.skip,
-		func(r *record) error {
-			return fn(r.value.Interface())
-		})
+	fnVal := reflect.ValueOf(fn)
+	argType := reflect.TypeOf(fn).In(0)
+
+	if argType.Kind() == reflect.Ptr {
+		argType = argType.Elem()
+	}
+
+	dataType := reflect.New(argType).Interface()
+
+	return s.runQuery(source, dataType, query, nil, query.skip, func(r *record) error {
+		out := fnVal.Call([]reflect.Value{r.value})
+		if len(out) != 1 {
+			return fmt.Errorf("foreach function does not return an error")
+		}
+
+		if out[0].IsNil() {
+			return nil
+		}
+
+		return out[0].Interface().(error)
+	})
 }
