@@ -67,17 +67,10 @@ func (s *Store) get(source bucketSource, key, result interface{}) error {
 	}
 
 	if keyField != "" {
-		structKeyVal := reflect.ValueOf(result).Elem().FieldByName(keyField)
-		keyVal := reflect.ValueOf(key)
-		// FIXME
-		if structKeyVal.Kind() == reflect.Ptr {
-			structKeyVal = structKeyVal.Elem()
+		err := s.decode(gk, reflect.ValueOf(result).Elem().FieldByName(keyField).Addr().Interface())
+		if err != nil {
+			return err
 		}
-		if keyVal.Kind() == reflect.Ptr {
-			keyVal = keyVal.Elem()
-		}
-
-		structKeyVal.Set(keyVal)
 	}
 
 	return nil
