@@ -6,6 +6,8 @@ package bolthold
 
 import (
 	"errors"
+	"reflect"
+	"strings"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -49,7 +51,29 @@ func (s *Store) get(source bucketSource, key, result interface{}) error {
 		return ErrNotFound
 	}
 
-	return s.decode(value, result)
+	err = s.decode(value, result)
+	if err != nil {
+		return err
+	}
+
+	tp := reflect.TypeOf(result).Elem()
+	var keyField string
+
+	for i := 0; i < tp.NumField(); i++ {
+		if strings.Contains(string(tp.Field(i).Tag), BoltholdKeyTag) {
+			keyField = tp.Field(i).Name
+			break
+		}
+	}
+
+	if keyField != "" {
+		err := s.decode(gk, reflect.ValueOf(result).Elem().FieldByName(keyField).Addr().Interface())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Find retrieves a set of values from the bolthold that matches the passed in query
