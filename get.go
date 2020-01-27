@@ -32,7 +32,7 @@ func (s *Store) GetFromBucket(parent *bolt.Bucket, key, result interface{}) erro
 	return s.get(parent, key, result)
 }
 
-func (s *Store) get(source bucketSource, key, result interface{}) error {
+func (s *Store) get(source BucketSource, key, result interface{}) error {
 	storer := s.newStorer(result)
 
 	gk, err := s.encode(key)

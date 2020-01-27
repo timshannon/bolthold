@@ -34,7 +34,7 @@ func (s *Store) DeleteFromBucket(parent *bolt.Bucket, key, dataType interface{})
 	return s.delete(parent, key, dataType)
 }
 
-func (s *Store) delete(source bucketSource, key, dataType interface{}) error {
+func (s *Store) delete(source BucketSource, key, dataType interface{}) error {
 	storer := s.newStorer(dataType)
 	gk, err := s.encode(key)
 

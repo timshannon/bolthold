@@ -206,7 +206,10 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 	return storer
 }
 
-type bucketSource interface {
+// BucketSource is the source of a bucket for running a query or updating data
+// Buckets and Transactions both implement BucketSource.  This allows for choosing a specific bucket or transaction
+// when running a query
+type BucketSource interface {
 	Bucket(name []byte) *bolt.Bucket
 	CreateBucketIfNotExists(name []byte) (*bolt.Bucket, error)
 }
