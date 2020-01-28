@@ -55,7 +55,7 @@ func (s *Store) InsertIntoBucket(parent *bolt.Bucket, key, data interface{}) err
 	return s.insert(parent, key, data)
 }
 
-func (s *Store) insert(source bucketSource, key, data interface{}) error {
+func (s *Store) insert(source BucketSource, key, data interface{}) error {
 	storer := s.newStorer(data)
 
 	b, err := source.CreateBucketIfNotExists([]byte(storer.Type()))
@@ -153,7 +153,7 @@ func (s *Store) UpdateBucket(parent *bolt.Bucket, key interface{}, data interfac
 
 }
 
-func (s *Store) update(source bucketSource, key interface{}, data interface{}) error {
+func (s *Store) update(source BucketSource, key interface{}, data interface{}) error {
 	storer := s.newStorer(data)
 
 	gk, err := s.encode(key)
@@ -225,7 +225,7 @@ func (s *Store) UpsertBucket(parent *bolt.Bucket, key interface{}, data interfac
 	return s.upsert(parent, key, data)
 }
 
-func (s *Store) upsert(source bucketSource, key interface{}, data interface{}) error {
+func (s *Store) upsert(source BucketSource, key interface{}, data interface{}) error {
 	storer := s.newStorer(data)
 
 	gk, err := s.encode(key)

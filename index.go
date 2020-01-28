@@ -24,7 +24,7 @@ const iteratorKeyMinCacheSize = 100
 type Index func(name string, value interface{}) ([]byte, error)
 
 // adds an item to the index
-func (s *Store) indexAdd(storer Storer, source bucketSource, key []byte, data interface{}) error {
+func (s *Store) indexAdd(storer Storer, source BucketSource, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
 		err := s.indexUpdate(storer.Type(), name, index, source, key, data, false)
@@ -38,7 +38,7 @@ func (s *Store) indexAdd(storer Storer, source bucketSource, key []byte, data in
 
 // removes an item from the index
 // be sure to pass the data from the old record, not the new one
-func (s *Store) indexDelete(storer Storer, source bucketSource, key []byte, originalData interface{}) error {
+func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, originalData interface{}) error {
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
@@ -52,7 +52,7 @@ func (s *Store) indexDelete(storer Storer, source bucketSource, key []byte, orig
 }
 
 // adds or removes a specific index on an item
-func (s *Store) indexUpdate(typeName, indexName string, index Index, source bucketSource, key []byte, value interface{},
+func (s *Store) indexUpdate(typeName, indexName string, index Index, source BucketSource, key []byte, value interface{},
 	delete bool) error {
 	indexKey, err := index(indexName, value)
 	if indexKey == nil {
@@ -97,7 +97,7 @@ func (s *Store) indexUpdate(typeName, indexName string, index Index, source buck
 }
 
 // IndexExists tests if an index exists for the passed in field name
-func (s *Store) IndexExists(source bucketSource, typeName, indexName string) bool {
+func (s *Store) IndexExists(source BucketSource, typeName, indexName string) bool {
 	return (source.Bucket(indexBucketName(typeName, indexName)) != nil)
 }
 
@@ -153,7 +153,7 @@ type iterator struct {
 	err         error
 }
 
-func (s *Store) newIterator(source bucketSource, typeName string, query *Query) *iterator {
+func (s *Store) newIterator(source BucketSource, typeName string, query *Query) *iterator {
 
 	iter := &iterator{
 		dataBucket: source.Bucket([]byte(typeName)),

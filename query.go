@@ -16,7 +16,7 @@ type record struct {
 	value reflect.Value
 }
 
-func (s *Store) runQuery(source bucketSource, dataType interface{}, query *Query, retrievedKeys keyList, skip int,
+func (s *Store) runQuery(source BucketSource, dataType interface{}, query *Query, retrievedKeys keyList, skip int,
 	action func(r *record) error) error {
 	storer := s.newStorer(dataType)
 
@@ -122,7 +122,7 @@ func (s *Store) runQuery(source bucketSource, dataType interface{}, query *Query
 }
 
 // runQuerySort runs the query without sort, skip, or limit, then applies them to the entire result set
-func (s *Store) runQuerySort(source bucketSource, dataType interface{}, query *Query, action func(r *record) error) error {
+func (s *Store) runQuerySort(source BucketSource, dataType interface{}, query *Query, action func(r *record) error) error {
 	// Validate sort fields
 	for _, field := range query.sort {
 		fields := strings.Split(field, ".")
@@ -230,7 +230,7 @@ func (s *Store) runQuerySort(source bucketSource, dataType interface{}, query *Q
 
 }
 
-func (s *Store) findQuery(source bucketSource, result interface{}, query *Query) error {
+func (s *Store) findQuery(source BucketSource, result interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -299,7 +299,7 @@ func (s *Store) findQuery(source bucketSource, result interface{}, query *Query)
 	return nil
 }
 
-func (s *Store) deleteQuery(source bucketSource, dataType interface{}, query *Query) error {
+func (s *Store) deleteQuery(source BucketSource, dataType interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -336,7 +336,7 @@ func (s *Store) deleteQuery(source bucketSource, dataType interface{}, query *Qu
 	return nil
 }
 
-func (s *Store) updateQuery(source bucketSource, dataType interface{}, query *Query, update func(record interface{}) error) error {
+func (s *Store) updateQuery(source BucketSource, dataType interface{}, query *Query, update func(record interface{}) error) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -392,7 +392,7 @@ func (s *Store) updateQuery(source bucketSource, dataType interface{}, query *Qu
 	return nil
 }
 
-func (s *Store) aggregateQuery(source bucketSource, dataType interface{}, query *Query,
+func (s *Store) aggregateQuery(source BucketSource, dataType interface{}, query *Query,
 	groupBy ...string) ([]*AggregateResult, error) {
 	if query == nil {
 		query = &Query{}
@@ -471,7 +471,7 @@ func (s *Store) aggregateQuery(source bucketSource, dataType interface{}, query 
 	return result, nil
 }
 
-func (s *Store) countQuery(source bucketSource, dataType interface{}, query *Query) (int, error) {
+func (s *Store) countQuery(source BucketSource, dataType interface{}, query *Query) (int, error) {
 	if query == nil {
 		query = &Query{}
 	}
@@ -491,7 +491,7 @@ func (s *Store) countQuery(source bucketSource, dataType interface{}, query *Que
 	return count, nil
 }
 
-func (s *Store) findOneQuery(source bucketSource, result interface{}, query *Query) error {
+func (s *Store) findOneQuery(source BucketSource, result interface{}, query *Query) error {
 	if query == nil {
 		query = &Query{}
 	}
@@ -551,7 +551,7 @@ func (s *Store) findOneQuery(source bucketSource, result interface{}, query *Que
 	return nil
 }
 
-func (s *Store) forEach(source bucketSource, query *Query, fn interface{}) error {
+func (s *Store) forEach(source BucketSource, query *Query, fn interface{}) error {
 	if query == nil {
 		query = &Query{}
 	}

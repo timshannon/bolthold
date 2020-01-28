@@ -46,7 +46,7 @@ type Query struct {
 
 	badIndex bool
 	dataType reflect.Type
-	source   bucketSource
+	source   BucketSource
 
 	limit   int
 	skip    int
@@ -380,7 +380,7 @@ type MatchFunc func(ra interface{}) (bool, error)
 // RecordAccess allows access to the current record, field or allows running a subquery within a
 // MatchFunc
 type RecordAccess struct {
-	source bucketSource
+	source BucketSource
 	s      *Store
 	record interface{}
 	field  interface{}
