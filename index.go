@@ -27,11 +27,23 @@ const iteratorKeyMinCacheSize = 100
 // Index is a function that returns the indexable, encoded bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
+// SliceIndex is a function that returns all of the indexable values in a slice
+type SliceIndex func(name string, value interface{}) ([][]byte, error)
+
+// TODO: get index data from slices
+
 // adds an item to the index
 func (s *Store) indexAdd(storer Storer, source BucketSource, key []byte, data interface{}) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, source, key, data, false)
+		indexKey, err := index(name, data)
+		if err != nil {
+			return err
+		}
+		if indexKey == nil {
+			return nil
+		}
+		err = s.indexUpdate(storer.Type(), name, indexKey, source, key, false)
 		if err != nil {
 			return err
 		}
@@ -46,7 +58,14 @@ func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, orig
 	indexes := storer.Indexes()
 
 	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, source, key, originalData, true)
+		indexKey, err := index(name, originalData)
+		if err != nil {
+			return err
+		}
+		if indexKey == nil {
+			return nil
+		}
+		err = s.indexUpdate(storer.Type(), name, indexKey, source, key, true)
 		if err != nil {
 			return err
 		}
@@ -56,18 +75,10 @@ func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, orig
 }
 
 // adds or removes a specific index on an item
-func (s *Store) indexUpdate(typeName, indexName string, index Index, source BucketSource, key []byte, value interface{},
+func (s *Store) indexUpdate(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
-	indexKey, err := index(indexName, value)
-	if indexKey == nil {
-		return nil
-	}
 
 	indexValue := make(keyList, 0)
-
-	if err != nil {
-		return err
-	}
 
 	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
 	if err != nil {

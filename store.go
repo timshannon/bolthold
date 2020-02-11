@@ -5,6 +5,7 @@
 package bolthold
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -135,14 +136,16 @@ func (s *Store) RemoveIndex(dataType interface{}, indexName string) error {
 
 // Storer is the Interface to implement to skip reflect calls on all data passed into the bolthold
 type Storer interface {
-	Type() string              // used as the boltdb bucket name
-	Indexes() map[string]Index //[indexname]indexFunc
+	Type() string                        // used as the boltdb bucket name
+	Indexes() map[string]Index           // [indexname]indexFunc
+	SliceIndexes() map[string]SliceIndex // [indexname]sliceIndexFunc
 }
 
 // anonType is created from a reflection of an unknown interface. This is the default storer used
 type anonStorer struct {
-	rType   reflect.Type
-	indexes map[string]Index
+	rType        reflect.Type
+	indexes      map[string]Index
+	sliceIndexes map[string]SliceIndex
 }
 
 // Type returns the name of the type as determined from the reflect package
@@ -153,6 +156,11 @@ func (t *anonStorer) Type() string {
 // Indexes returns the Indexes determined by the reflect package on this type
 func (t *anonStorer) Indexes() map[string]Index {
 	return t.indexes
+}
+
+// SliceIndexes returns the Indexes determined by the reflect package on this type
+func (t *anonStorer) SliceIndexes() map[string]SliceIndex {
+	return t.sliceIndexes
 }
 
 // newStorer creates a type which satisfies the Storer interface based on reflection of the passed in dataType
@@ -172,8 +180,9 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 	}
 
 	storer := &anonStorer{
-		rType:   tp,
-		indexes: make(map[string]Index),
+		rType:        tp,
+		indexes:      make(map[string]Index),
+		sliceIndexes: make(map[string]SliceIndex),
 	}
 
 	if storer.rType.Name() == "" {
@@ -199,6 +208,36 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 				}
 
 				return s.encode(tp.FieldByName(name).Interface())
+			}
+		}
+		if strings.Contains(string(storer.rType.Field(i).Tag), BoltholdSliceIndexTag) {
+			indexName := storer.rType.Field(i).Tag.Get(BoltholdSliceIndexTag)
+
+			if indexName != "" {
+				indexName = storer.rType.Field(i).Name
+			}
+
+			storer.sliceIndexes[indexName] = func(name string, value interface{}) ([][]byte, error) {
+				tp := reflect.ValueOf(value)
+				for tp.Kind() == reflect.Ptr {
+					tp = tp.Elem()
+				}
+
+				if tp.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("Type %s is not a slice", tp.Type())
+				}
+
+				indexValue := make(keyList, 0)
+
+				for i := 0; i < tp.Len(); i++ {
+					b, err := s.encode(tp.Index(i).Interface())
+					if err != nil {
+						return nil, err
+					}
+					indexValue.add(b)
+				}
+
+				return indexValue, nil
 			}
 		}
 	}
