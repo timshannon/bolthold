@@ -12,8 +12,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// BoltholdIndexTag is the struct tag used to define an a field as indexable for a bolthold
+// BoltholdIndexTag is the struct tag used to define a field as indexable for a bolthold
 const BoltholdIndexTag = "boltholdIndex"
+
+// BoltholdSliceIndexTag is the struct tag used to define a slice field as indexable, where each item in the
+// slice is indexed separately rather than as one index
+const BoltholdSliceIndexTag = "boltholdSliceIndex"
 
 const indexBucketPrefix = "_index"
 

@@ -139,7 +139,7 @@ type Storer interface {
 	Indexes() map[string]Index //[indexname]indexFunc
 }
 
-// anonType is created from a reflection of an unknown interface
+// anonType is created from a reflection of an unknown interface. This is the default storer used
 type anonStorer struct {
 	rType   reflect.Type
 	indexes map[string]Index
