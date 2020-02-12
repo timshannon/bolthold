@@ -327,7 +327,7 @@ func (s *Store) deleteQuery(source BucketSource, dataType interface{}, query *Qu
 		}
 
 		// remove any indexes
-		err = s.indexDelete(storer, source, records[i].key, records[i].value.Interface())
+		err = s.deleteIndexes(storer, source, records[i].key, records[i].value.Interface())
 		if err != nil {
 			return err
 		}
@@ -362,7 +362,7 @@ func (s *Store) updateQuery(source BucketSource, dataType interface{}, query *Qu
 		upVal := records[i].value.Interface()
 
 		// delete any existing indexes bad on original value
-		err := s.indexDelete(storer, source, records[i].key, upVal)
+		err := s.deleteIndexes(storer, source, records[i].key, upVal)
 		if err != nil {
 			return err
 		}
@@ -383,7 +383,7 @@ func (s *Store) updateQuery(source BucketSource, dataType interface{}, query *Qu
 		}
 
 		// insert any new indexes
-		err = s.indexAdd(storer, source, records[i].key, upVal)
+		err = s.addIndexes(storer, source, records[i].key, upVal)
 		if err != nil {
 			return err
 		}

@@ -115,7 +115,7 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 			if err != nil {
 				return err
 			}
-			err = s.indexAdd(storer, tx, k, exampleType)
+			err = s.addIndexes(storer, tx, k, exampleType)
 			if err != nil {
 				return err
 			}
@@ -222,15 +222,16 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 				for tp.Kind() == reflect.Ptr {
 					tp = tp.Elem()
 				}
+				field := tp.FieldByName(name)
 
-				if tp.Kind() != reflect.Slice {
-					return nil, fmt.Errorf("Type %s is not a slice", tp.Type())
+				if field.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("Type %s is not a slice", field.Type())
 				}
 
 				indexValue := make(keyList, 0)
 
-				for i := 0; i < tp.Len(); i++ {
-					b, err := s.encode(tp.Index(i).Interface())
+				for i := 0; i < field.Len(); i++ {
+					b, err := s.encode(field.Index(i).Interface())
 					if err != nil {
 						return nil, err
 					}

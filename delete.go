@@ -64,7 +64,7 @@ func (s *Store) delete(source BucketSource, key, dataType interface{}) error {
 	}
 
 	// remove any indexes
-	return s.indexDelete(storer, source, gk, value)
+	return s.deleteIndexes(storer, source, gk, value)
 }
 
 // DeleteMatching deletes all of the records that match the passed in query

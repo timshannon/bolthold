@@ -33,7 +33,17 @@ type SliceIndex func(name string, value interface{}) ([][]byte, error)
 // TODO: get index data from slices
 
 // adds an item to the index
-func (s *Store) indexAdd(storer Storer, source BucketSource, key []byte, data interface{}) error {
+func (s *Store) addIndexes(storer Storer, source BucketSource, key []byte, data interface{}) error {
+	return s.updateIndexes(storer, source, key, data, false)
+}
+
+// removes an item from the index
+// be sure to pass the data from the old record, not the new one
+func (s *Store) deleteIndexes(storer Storer, source BucketSource, key []byte, originalData interface{}) error {
+	return s.updateIndexes(storer, source, key, originalData, true)
+}
+
+func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, data interface{}, delete bool) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
 		indexKey, err := index(name, data)
@@ -43,31 +53,27 @@ func (s *Store) indexAdd(storer Storer, source BucketSource, key []byte, data in
 		if indexKey == nil {
 			return nil
 		}
-		err = s.indexUpdate(storer.Type(), name, indexKey, source, key, false)
+		err = s.updateIndex(storer.Type(), name, indexKey, source, key, delete)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
-}
-
-// removes an item from the index
-// be sure to pass the data from the old record, not the new one
-func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, originalData interface{}) error {
-	indexes := storer.Indexes()
-
-	for name, index := range indexes {
-		indexKey, err := index(name, originalData)
+	sliceIndexes := storer.SliceIndexes()
+	for name, index := range sliceIndexes {
+		indexKeys, err := index(name, data)
 		if err != nil {
 			return err
 		}
-		if indexKey == nil {
+		if indexKeys == nil {
 			return nil
 		}
-		err = s.indexUpdate(storer.Type(), name, indexKey, source, key, true)
-		if err != nil {
-			return err
+
+		for i := range indexKeys {
+			err = s.updateIndex(storer.Type(), name, indexKeys[i], source, key, delete)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -75,7 +81,7 @@ func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, orig
 }
 
 // adds or removes a specific index on an item
-func (s *Store) indexUpdate(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
+func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
 
 	indexValue := make(keyList, 0)
