@@ -90,6 +90,15 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 			}
 		}
 
+		sliceIndexes := storer.SliceIndexes()
+
+		for indexName := range sliceIndexes {
+			err := tx.DeleteBucket(indexBucketName(storer.Type(), indexName))
+			if err != nil && err != bolt.ErrBucketNotFound {
+				return err
+			}
+		}
+
 		copyData := true
 
 		if bucketName == nil {
