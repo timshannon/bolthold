@@ -12,8 +12,12 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// BoltholdIndexTag is the struct tag used to define an a field as indexable for a bolthold
+// BoltholdIndexTag is the struct tag used to define a field as indexable for a bolthold
 const BoltholdIndexTag = "boltholdIndex"
+
+// BoltholdSliceIndexTag is the struct tag used to define a slice field as indexable, where each item in the
+// slice is indexed separately rather than as one index
+const BoltholdSliceIndexTag = "boltholdSliceIndex"
 
 const indexBucketPrefix = "_index"
 
@@ -23,28 +27,53 @@ const iteratorKeyMinCacheSize = 100
 // Index is a function that returns the indexable, encoded bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
+// SliceIndex is a function that returns all of the indexable values in a slice
+type SliceIndex func(name string, value interface{}) ([][]byte, error)
+
+// TODO: get index data from slices
+
 // adds an item to the index
-func (s *Store) indexAdd(storer Storer, source BucketSource, key []byte, data interface{}) error {
+func (s *Store) addIndexes(storer Storer, source BucketSource, key []byte, data interface{}) error {
+	return s.updateIndexes(storer, source, key, data, false)
+}
+
+// removes an item from the index
+// be sure to pass the data from the old record, not the new one
+func (s *Store) deleteIndexes(storer Storer, source BucketSource, key []byte, originalData interface{}) error {
+	return s.updateIndexes(storer, source, key, originalData, true)
+}
+
+func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, data interface{}, delete bool) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, source, key, data, false)
+		indexKey, err := index(name, data)
+		if err != nil {
+			return err
+		}
+		if indexKey == nil {
+			return nil
+		}
+		err = s.updateIndex(storer.Type(), name, indexKey, source, key, delete)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
-}
-
-// removes an item from the index
-// be sure to pass the data from the old record, not the new one
-func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, originalData interface{}) error {
-	indexes := storer.Indexes()
-
-	for name, index := range indexes {
-		err := s.indexUpdate(storer.Type(), name, index, source, key, originalData, true)
+	sliceIndexes := storer.SliceIndexes()
+	for name, index := range sliceIndexes {
+		indexKeys, err := index(name, data)
 		if err != nil {
 			return err
+		}
+		if indexKeys == nil {
+			return nil
+		}
+
+		for i := range indexKeys {
+			err = s.updateIndex(storer.Type(), name, indexKeys[i], source, key, delete)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -52,18 +81,10 @@ func (s *Store) indexDelete(storer Storer, source BucketSource, key []byte, orig
 }
 
 // adds or removes a specific index on an item
-func (s *Store) indexUpdate(typeName, indexName string, index Index, source BucketSource, key []byte, value interface{},
+func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
-	indexKey, err := index(indexName, value)
-	if indexKey == nil {
-		return nil
-	}
 
 	indexValue := make(keyList, 0)
-
-	if err != nil {
-		return err
-	}
 
 	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
 	if err != nil {

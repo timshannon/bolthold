@@ -93,7 +93,7 @@ func (s *Store) insert(source BucketSource, key, data interface{}) error {
 	}
 
 	// insert any indexes
-	err = s.indexAdd(storer, source, gk, data)
+	err = s.addIndexes(storer, source, gk, data)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (s *Store) update(source BucketSource, key interface{}, data interface{}) e
 		return err
 	}
 
-	err = s.indexDelete(storer, source, gk, existingVal)
+	err = s.deleteIndexes(storer, source, gk, existingVal)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (s *Store) update(source BucketSource, key interface{}, data interface{}) e
 	}
 
 	// insert any new indexes
-	return s.indexAdd(storer, source, gk, data)
+	return s.addIndexes(storer, source, gk, data)
 }
 
 // Upsert inserts the record into the bolthold if it doesn't exist.  If it does already exist, then it updates
@@ -251,7 +251,7 @@ func (s *Store) upsert(source BucketSource, key interface{}, data interface{}) e
 			return err
 		}
 
-		err = s.indexDelete(storer, source, gk, existingVal)
+		err = s.deleteIndexes(storer, source, gk, existingVal)
 		if err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ func (s *Store) upsert(source BucketSource, key interface{}, data interface{}) e
 	}
 
 	// insert any new indexes
-	return s.indexAdd(storer, source, gk, data)
+	return s.addIndexes(storer, source, gk, data)
 }
 
 // UpdateMatching runs the update function for every record that match the passed in query

@@ -20,7 +20,7 @@ type ItemTest struct {
 	Name        string
 	Category    string `boltholdIndex:"Category"`
 	Created     time.Time
-	Tags        []string
+	Tags        []string `boltholdSliceIndex:"Tags"`
 	Color       string
 	Fruit       string
 	UpdateField string

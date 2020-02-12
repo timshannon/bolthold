@@ -1,5 +1,5 @@
 # BoltHold
-[![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://godoc.org/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
+[![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://pkg.go.dev/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
 
 
 BoltHold is a simple querying and indexing layer on top of a Bolt DB instance.  For a similar library built on
@@ -41,6 +41,51 @@ main record keys they refer to.  More information on how indexes work can be fou
 
 Optionally, you can implement the `Storer` interface, to specify your own indexes, rather than using the `boltHoldIndex`
 struct tag.
+
+### Slice Indexes
+When you create an index on a slice of items, by default it may not do what you expect.  Consider the following records:
+
+| ID 	| Name 		| Categories 		|
+| --- 	| --- 		| --- 				|
+| 1 	| John 		| red, green, blue 	|
+| 2 	| Bill 		| red, purple	 	|
+| 3 	| Jane 		| red, orange	 	|
+| 4 	| Brian		| red, purple	 	|
+
+
+You may expect your `Categories` index to look like the following:
+
+| Categories 	| ID 			| 
+| --- 			| --- 			| 
+| red			| 1, 2, 3, 4	| 
+| green			| 1 			|
+| blue			| 1 			|
+| purple		| 2, 4 			|
+| orange		| 3 			|
+
+But they'll actually look like this:
+
+| Categories 		| ID 			| 
+| --- 				| --- 			| 
+| red, green, blue	| 1				| 
+| red, purple		| 2, 4 			|
+| red, orange		| 3 			|
+
+
+So if you did a query like this:
+```Go
+bh.Where("Categories").Contains("red").Index("Categories")
+```
+
+It'll work, but you'll be reading more records than you'd expect.  You'd only "save reads" on values where the list of 
+categories exactly match.
+
+If instead you want to index each individual item in the slice, you can use the struct tag `boltholdSliceIndex`. It
+will then individually index eacy item in the slice, and potentially give you performance benefits if you have a lot
+of overlap with individual items in your sliced fields.
+
+Be sure to benchmark both a regular index and a sliced index to see which performs better for your specific dataset.
+
 
 ## Queries
 Queries are chain-able constructs that filters out any data that doesn't match it's criteria. An index will be used if
