@@ -497,7 +497,12 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 		slc := reflect.ValueOf(recordValue)
 		kind := slc.Kind()
 		if kind != reflect.Slice && kind != reflect.Array {
-			return false, nil
+			// not an array, so test it as a whole fixes #85
+			result, err := c.compare(recordValue, c.value, currentRow)
+			if err != nil {
+				return false, err
+			}
+			return result == 0, nil
 		}
 
 		if c.operator == contains {
