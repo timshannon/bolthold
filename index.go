@@ -30,8 +30,6 @@ type Index func(name string, value interface{}) ([]byte, error)
 // SliceIndex is a function that returns all of the indexable values in a slice
 type SliceIndex func(name string, value interface{}) ([][]byte, error)
 
-// TODO: get index data from slices
-
 // adds an item to the index
 func (s *Store) addIndexes(storer Storer, source BucketSource, key []byte, data interface{}) error {
 	return s.updateIndexes(storer, source, key, data, false)

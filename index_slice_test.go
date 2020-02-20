@@ -67,3 +67,35 @@ func TestIndexSlice(t *testing.T) {
 
 	})
 }
+
+func Test85SliceIndex(t *testing.T) {
+	type Event struct {
+		Id         uint64
+		Type       string   `boltholdIndex:"Type"`
+		Categories []string `boltholdSliceIndex:"Categories"`
+	}
+
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		e1 := &Event{Id: 1, Type: "Type1", Categories: []string{"Cat 1", "Cat 2"}}
+		e2 := &Event{Id: 2, Type: "Type1", Categories: []string{"Cat 3"}}
+
+		err := store.Insert(e1.Id, e1)
+		if err != nil {
+			t.Fatalf("Error inserting record: %s", err)
+		}
+		store.Insert(e2.Id, e2)
+		if err != nil {
+			t.Fatalf("Error inserting record: %s", err)
+		}
+
+		var es []*Event
+		err = store.Find(&es, bolthold.Where("Categories").Contains("Cat 1").Index("Categories"))
+		if err != nil {
+			t.Fatalf("Error querying: %s", err)
+		}
+
+		if len(es) != 1 {
+			t.Fatalf("Expected 1, got %d", len(es))
+		}
+	})
+}
