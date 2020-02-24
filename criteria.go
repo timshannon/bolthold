@@ -422,22 +422,16 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 	var recordValue interface{}
 	if encoded {
 		if len(testValue.([]byte)) != 0 {
+			// used with keys
 			if c.operator == in || c.operator == any || c.operator == all {
 				// value is a slice of values, use c.values
 				recordValue = reflect.New(reflect.TypeOf(c.values[0])).Interface()
-				err := s.decode(testValue.([]byte), recordValue)
-				if err != nil {
-					return false, err
-				}
-
 			} else {
-				// used with keys
 				recordValue = reflect.New(reflect.TypeOf(c.value)).Interface()
-				err := s.decode(testValue.([]byte), recordValue)
-				if err != nil {
-					return false, err
-				}
-
+			}
+			err := s.decode(testValue.([]byte), recordValue)
+			if err != nil {
+				return false, err
 			}
 		}
 
@@ -497,12 +491,11 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 		slc := reflect.ValueOf(recordValue)
 		kind := slc.Kind()
 		if kind != reflect.Slice && kind != reflect.Array {
-			// not an array, so test it as a whole fixes #85
-			result, err := c.compare(recordValue, c.value, currentRow)
-			if err != nil {
-				return false, err
+			// make slice containing recordValue
+			for slc.Kind() == reflect.Ptr {
+				slc = slc.Elem()
 			}
-			return result == 0, nil
+			slc = reflect.Append(reflect.MakeSlice(reflect.SliceOf(slc.Type()), 0, 1), slc)
 		}
 
 		if c.operator == contains {
