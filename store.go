@@ -208,12 +208,12 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 		panic("Invalid Type for Storer.  BoltHold only works with structs")
 	}
 
-	for i := 0; i < storer.rType.NumField(); i++ {
-		if strings.Contains(string(storer.rType.Field(i).Tag), BoltholdIndexTag) {
-			indexName := storer.rType.Field(i).Tag.Get(BoltholdIndexTag)
+	addIndex := func(field reflect.StructField) {
+		if strings.Contains(string(field.Tag), BoltholdIndexTag) {
+			indexName := field.Tag.Get(BoltholdIndexTag)
 
 			if indexName != "" {
-				indexName = storer.rType.Field(i).Name
+				indexName = field.Name
 			}
 
 			storer.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
@@ -225,11 +225,11 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 				return s.encode(tp.FieldByName(name).Interface())
 			}
 		}
-		if strings.Contains(string(storer.rType.Field(i).Tag), BoltholdSliceIndexTag) {
-			indexName := storer.rType.Field(i).Tag.Get(BoltholdSliceIndexTag)
+		if strings.Contains(string(field.Tag), BoltholdSliceIndexTag) {
+			indexName := field.Tag.Get(BoltholdSliceIndexTag)
 
 			if indexName != "" {
-				indexName = storer.rType.Field(i).Name
+				indexName = field.Name
 			}
 
 			storer.sliceIndexes[indexName] = func(name string, value interface{}) ([][]byte, error) {
@@ -237,16 +237,16 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 				for tp.Kind() == reflect.Ptr {
 					tp = tp.Elem()
 				}
-				field := tp.FieldByName(name)
+				fld := tp.FieldByName(name)
 
-				if field.Kind() != reflect.Slice {
-					return nil, fmt.Errorf("Type %s is not a slice", field.Type())
+				if fld.Kind() != reflect.Slice {
+					return nil, fmt.Errorf("Type %s is not a slice", fld.Type())
 				}
 
 				indexValue := make(keyList, 0)
 
-				for i := 0; i < field.Len(); i++ {
-					b, err := s.encode(field.Index(i).Interface())
+				for i := 0; i < fld.Len(); i++ {
+					b, err := s.encode(fld.Index(i).Interface())
 					if err != nil {
 						return nil, err
 					}
@@ -255,6 +255,21 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 
 				return indexValue, nil
 			}
+		}
+	}
+
+	for i := 0; i < storer.rType.NumField(); i++ {
+		field := storer.rType.Field(i)
+		if field.Anonymous {
+			anonType := field.Type
+			if anonType.Kind() == reflect.Ptr {
+				anonType = anonType.Elem()
+			}
+			for j := 0; j < anonType.NumField(); j++ {
+				addIndex(anonType.Field(j))
+			}
+		} else {
+			addIndex(field)
 		}
 	}
 
