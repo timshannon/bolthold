@@ -582,10 +582,7 @@ var testResults = []test{
 
 func insertTestData(t *testing.T, store *bolthold.Store) {
 	for i := range testData {
-		err := store.Insert(testData[i].Key, testData[i])
-		if err != nil {
-			t.Fatalf("Error inserting test data for find test: %s", err)
-		}
+		ok(t, store.Insert(testData[i].Key, testData[i]))
 	}
 }
 

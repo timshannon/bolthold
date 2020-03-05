@@ -106,7 +106,13 @@ func (s *Store) ReIndex(exampleType interface{}, bucketName []byte) error {
 			copyData = false
 		}
 
-		c := tx.Bucket(bucketName).Cursor()
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			// no data / nothing to do,
+			return nil
+		}
+
+		c := bucket.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			if copyData {
