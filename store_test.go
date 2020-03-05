@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/timshannon/bolthold"
@@ -18,13 +21,9 @@ import (
 func TestOpen(t *testing.T) {
 	filename := tempfile()
 	store, err := bolthold.Open(filename, 0666, nil)
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", filename, err)
-	}
+	ok(t, err)
 
-	if store == nil {
-		t.Fatalf("store is null!")
-	}
+	assert(t, store != nil, "store is null!")
 
 	defer store.Close()
 	defer os.Remove(filename)
@@ -33,9 +32,7 @@ func TestOpen(t *testing.T) {
 func TestBolt(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		b := store.Bolt()
-		if b == nil {
-			t.Fatalf("Bolt is null in bolthold")
-		}
+		assert(t, b != nil, "Bolt is null in bolthold")
 	})
 }
 
@@ -51,32 +48,21 @@ func TestRemoveIndex(t *testing.T) {
 
 		iName := indexName("ItemTest", "Category")
 
-		err := store.Bolt().View(func(tx *bolt.Tx) error {
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
 				return fmt.Errorf("index %s doesn't exist", iName)
 			}
 			return nil
-		})
+		}))
 
-		if err != nil {
-			t.Fatal(err)
-		}
+		ok(t, store.RemoveIndex(item, "Category"))
 
-		err = store.RemoveIndex(item, "Category")
-		if err != nil {
-			t.Fatalf("Error removing index %s", err)
-		}
-
-		err = store.Bolt().View(func(tx *bolt.Tx) error {
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) != nil {
 				return fmt.Errorf("index %s wasn't removed", iName)
 			}
 			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		}))
 	})
 }
 
@@ -87,54 +73,32 @@ func TestReIndex(t *testing.T) {
 
 		iName := indexName("ItemTest", "Category")
 
-		err := store.RemoveIndex(item, "Category")
-		if err != nil {
-			t.Fatalf("Error removing index %s", err)
-		}
-
-		err = store.Bolt().View(func(tx *bolt.Tx) error {
+		ok(t, store.RemoveIndex(item, "Category"))
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) != nil {
 				return fmt.Errorf("index %s wasn't removed", iName)
 			}
 			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = store.ReIndex(&item, nil)
-		if err != nil {
-			t.Fatalf("Error reindexing store: %v", err)
-		}
-
-		err = store.Bolt().View(func(tx *bolt.Tx) error {
+		}))
+		ok(t, store.ReIndex(&item, nil))
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
 				return fmt.Errorf("index %s wasn't rebuilt", iName)
 			}
 			return nil
-		})
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		}))
 	})
 }
 
 func TestIndexExists(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		insertTestData(t, store)
-		err := store.Bolt().View(func(tx *bolt.Tx) error {
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if !store.IndexExists(tx, "ItemTest", "Category") {
 				return fmt.Errorf("index %s doesn't exist", "ItemTest:Category")
 			}
 			return nil
-		})
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		}))
 	})
 }
 
@@ -148,22 +112,14 @@ func TestReIndexWithCopy(t *testing.T) {
 
 		iName := indexName("ItemTestClone", "Category")
 
-		err := store.ReIndex(&item, []byte("ItemTest"))
-		if err != nil {
-			t.Fatalf("Error reindexing store: %v", err)
-		}
+		ok(t, store.ReIndex(&item, []byte("ItemTest")))
 
-		err = store.Bolt().View(func(tx *bolt.Tx) error {
+		ok(t, store.Bolt().View(func(tx *bolt.Tx) error {
 			if tx.Bucket(iName) == nil {
 				return fmt.Errorf("index %s wasn't rebuilt", iName)
 			}
 			return nil
-		})
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
+		}))
 	})
 }
 
@@ -176,9 +132,7 @@ func TestAlternateEncoding(t *testing.T) {
 	defer store.Close()
 	defer os.Remove(filename)
 
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", filename, err)
-	}
+	ok(t, err)
 
 	insertTestData(t, store)
 
@@ -210,18 +164,14 @@ func TestPerStoreEncoding(t *testing.T) {
 	defer jsnStore.Close()
 	defer os.Remove(jsnFilename)
 
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", jsnFilename, err)
-	}
+	ok(t, err)
 
 	gobFilename := tempfile()
 	gobStore, err := bolthold.Open(gobFilename, 0666, &bolthold.Options{})
 	defer gobStore.Close()
 	defer os.Remove(gobFilename)
 
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", gobFilename, err)
-	}
+	ok(t, err)
 
 	insertTestData(t, jsnStore)
 	insertTestData(t, gobStore)
@@ -269,19 +219,22 @@ func TestGetUnknownType(t *testing.T) {
 	defer store.Close()
 	defer os.Remove(filename)
 
-	if err != nil {
-		t.Fatalf("Error opening %s: %s", filename, err)
-	}
-
+	ok(t, err)
 	type test struct {
 		Test string
 	}
 
 	var result test
 	err = store.Get("unknownKey", &result)
-	if err != bolthold.ErrNotFound {
-		t.Errorf("Expected error of type ErrNotFound, not %T", err)
-	}
+	assert(t, err == bolthold.ErrNotFound, "Expected error of type ErrNotFound, not %T", err)
+}
+
+func TestEmptyReIndexIssue89(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		var item ItemTest
+		ok(t, store.ReIndex(&item, nil))
+		// shouldn't panic
+	})
 }
 
 // utilities
@@ -318,4 +271,33 @@ func tempfile() string {
 		panic(err)
 	}
 	return f.Name()
+}
+
+// Thanks Ben Johnson https://github.com/benbjohnson/testing
+
+// assert fails the test if the condition is false.
+func assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
+	if !condition {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
+		tb.FailNow()
+	}
+}
+
+// ok fails the test if an err is not nil.
+func ok(tb testing.TB, err error) {
+	if err != nil {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n\n", filepath.Base(file), line, err.Error())
+		tb.FailNow()
+	}
+}
+
+// equals fails the test if exp is not equal to act.
+func equals(tb testing.TB, exp, act interface{}) {
+	if !reflect.DeepEqual(exp, act) {
+		_, file, line, _ := runtime.Caller(1)
+		fmt.Printf("\033[31m%s:%d:\n\n\texp: %#v\n\n\tgot: %#v\033[39m\n\n", filepath.Base(file), line, exp, act)
+		tb.FailNow()
+	}
 }
