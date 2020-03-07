@@ -23,6 +23,7 @@ const (
 	re           // regular expression
 	fn           // func
 	isnil        // test's for nil
+	hk           // match map keys
 
 	contains // slice only
 	any      // slice only
@@ -328,6 +329,11 @@ func (c *Criterion) In(values ...interface{}) *Query {
 	return q
 }
 
+// HasKey tests if the field has a map key matching the passed in value
+func (c *Criterion) HasKey(value interface{}) *Query {
+	return c.op(hk, value)
+}
+
 // RegExp will test if a field matches against the regular expression
 // The Field Value will be converted to string (%s) before testing
 func (c *Criterion) RegExp(expression *regexp.Regexp) *Query {
@@ -452,6 +458,9 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 		}
 
 		return false, nil
+	case hk:
+		v := reflect.ValueOf(recordValue).MapIndex(reflect.ValueOf(c.value))
+		return !reflect.ValueOf(v).IsZero(), nil
 	case re:
 		return c.value.(*regexp.Regexp).Match([]byte(fmt.Sprintf("%s", recordValue))), nil
 	case fn:
