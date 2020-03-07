@@ -258,15 +258,24 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 		}
 	}
 
+	value := reflect.ValueOf(dataType)
+	if value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+	
 	for i := 0; i < storer.rType.NumField(); i++ {
 		field := storer.rType.Field(i)
 		if field.Anonymous {
-			anonType := field.Type
-			if anonType.Kind() == reflect.Ptr {
-				anonType = anonType.Elem()
-			}
-			for j := 0; j < anonType.NumField(); j++ {
-				addIndex(anonType.Field(j))
+			//check if the field value is nil
+			if !value.FieldByName(field.Name).IsNil() {
+				anonType := field.Type
+				if anonType.Kind() == reflect.Ptr {
+					anonType = anonType.Elem()
+				}
+
+				for j := 0; j < anonType.NumField(); j++ {
+					addIndex(anonType.Field(j))
+				}
 			}
 		} else {
 			addIndex(field)
