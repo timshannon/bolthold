@@ -222,7 +222,31 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 					tp = tp.Elem()
 				}
 
-				return s.encode(tp.FieldByName(name).Interface())
+				tpType := tp.Type()
+				for i := 0; i < tpType.NumField(); i++ {
+					if tpType.Field(i).Anonymous {
+						anonValue := tp.Field(i)
+
+						anonType := anonValue.Type()
+						if anonType.Kind() == reflect.Ptr {
+							if anonValue.IsNil() {
+								return nil, nil
+							}
+							anonType = anonType.Elem()
+						}
+						for j := 0; j < anonType.NumField(); j++ {
+							if anonType.Field(j).Name == name {
+
+								return s.encode(anonValue.Interface())
+							}
+						}
+					} else {
+						if tpType.Field(i).Name == name {
+							return s.encode(tp.Field(i).Interface())
+						}
+					}
+				}
+				panic("Field " + name + " does not exist in this value")
 			}
 		}
 		if strings.Contains(string(field.Tag), BoltholdSliceIndexTag) {
