@@ -210,3 +210,35 @@ func Test90AnonIndexPointer(t *testing.T) {
 
 	})
 }
+
+func Test94NilAnonIndexPointer(t *testing.T) {
+	type (
+		Profile struct {
+			Username string `boltholdIndex:"Username" json:"username"`
+			Password string `json:"password"`
+		}
+
+		User struct {
+			*Profile
+
+			ID   string
+			Name string
+		}
+	)
+
+	testWrap(t, func(store *bh.Store, t *testing.T) {
+		ok(t, store.Insert(1, &User{
+			ID:   "1234",
+			Name: "Tester",
+		}))
+
+		b := store.Bolt()
+
+		ok(t, b.View(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket(indexName("User", "Username"))
+			assert(t, bucket == nil, "Found index where none should've been added")
+			return nil
+		}))
+
+	})
+}
