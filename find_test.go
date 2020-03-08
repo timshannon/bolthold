@@ -25,6 +25,7 @@ type ItemTest struct {
 	Fruit       string
 	UpdateField string
 	UpdateIndex string `boltholdIndex:"UpdateIndex"`
+	MapVal      map[string]string
 }
 
 func (i *ItemTest) equal(other *ItemTest) bool {
@@ -177,6 +178,9 @@ var testData = []ItemTest{
 		Name:     "zebra",
 		Category: "animal",
 		Created:  time.Now(),
+		MapVal: map[string]string{
+			"test": "testval",
+		},
 	},
 }
 
@@ -576,6 +580,16 @@ var testResults = []test{
 	test{
 		name:   "Contains on non-slice",
 		query:  bolthold.Where("Category").Contains("cooked"),
+		result: []int{},
+	},
+	test{
+		name:   "Map Has Key",
+		query:  bolthold.Where("MapVal").HasKey("test"),
+		result: []int{16},
+	},
+	test{
+		name:   "Map Has Key 2",
+		query:  bolthold.Where("MapVal").HasKey("other"),
 		result: []int{},
 	},
 }
