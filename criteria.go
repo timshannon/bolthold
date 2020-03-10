@@ -202,10 +202,6 @@ func (q *Query) Reverse() *Query {
 
 // Index specifies the index to use when running this query
 func (q *Query) Index(indexName string) *Query {
-	if strings.Contains(indexName, ".") {
-		// NOTE: I may reconsider this in the future
-		panic("Nested indexes are not supported.  Only top level structures can be indexed")
-	}
 	q.index = indexName
 	return q
 }

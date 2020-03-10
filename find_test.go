@@ -1056,16 +1056,6 @@ func TestKeyStructTagIntoPtr(t *testing.T) {
 	})
 }
 
-func TestQueryNestedIndex(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("Querying with a nested index field did not panic!")
-		}
-	}()
-
-	_ = bolthold.Where("Test").Eq("test").Index("Nested.Name")
-}
-
 func TestNestedStructPointer(t *testing.T) {
 
 	type notification struct {
