@@ -120,6 +120,7 @@ Fields must be exported, and thus always need to start with an upper-case letter
 * Contains - `Where("field").Contains(val1)`
 * ContainsAll - `Where("field").Contains(val1, val2, val3)`
 * ContainsAny - `Where("field").Contains(val1, val2, val3)`
+* HasKey - `Where("field").HasKey(val1) // to test if a Map value has a key`
 
 
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
