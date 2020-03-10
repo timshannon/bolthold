@@ -337,3 +337,200 @@ func Test98MultipleAnonIndex(t *testing.T) {
 		})
 	})
 }
+
+func TestNestedAnonIndex(t *testing.T) {
+	type (
+		Credential struct {
+			Username string `boltholdIndex:"Username"`
+			Password string
+		}
+		Profile struct {
+			*Credential
+			Address string
+		}
+		Account struct {
+			GuardianName string `boltholdIndex:"Guardian"`
+			Create       time.Time
+		}
+
+		User struct {
+			*Profile
+			*Account
+
+			ID   string
+			Name string
+		}
+	)
+
+	t.Run("nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket == nil, "Found index where none should've been added")
+
+				bucket = tx.Bucket(indexName("User", "Guardian"))
+				assert(t, bucket != nil, "No index found for Guardian")
+				return nil
+			}))
+
+		})
+	})
+
+	t.Run("not nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Credential: &Credential{
+						Username: "test",
+						Password: "test",
+					},
+					Address: "test",
+				},
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket != nil, "No index found for Username")
+
+				bucket = tx.Bucket(indexName("User", "Guardian"))
+				assert(t, bucket != nil, "No index found for Guardian")
+				return nil
+			}))
+		})
+	})
+
+	t.Run("nested nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Address: "test",
+				},
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket == nil, "Index found for Username")
+
+				bucket = tx.Bucket(indexName("User", "Guardian"))
+				assert(t, bucket == nil, "Index found for Guardian")
+				return nil
+			}))
+		})
+	})
+
+	t.Run("Select Nested Anon", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Address: "test",
+				},
+			}))
+
+			res := &User{}
+
+			ok(t, store.FindOne(res, bh.Where("Profile.Address").Eq("test")))
+			equals(t, res.Profile.Address, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Address").Eq("test")))
+			equals(t, res.Profile.Address, "test")
+		})
+	})
+
+	t.Run("Select Nested Anon with index", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Credential: &Credential{
+						Username: "test",
+						Password: "test",
+					},
+					Address: "test",
+				},
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			res := &User{}
+
+			ok(t, store.FindOne(res, bh.Where("Profile.Username").Eq("test")))
+			equals(t, res.Profile.Username, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Username").Eq("test")))
+			equals(t, res.Profile.Username, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Profile.Username").Eq("test").Index("Username")))
+			equals(t, res.Profile.Username, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Username").Eq("test").Index("Username")))
+			equals(t, res.Profile.Username, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Profile.Credential.Username").Eq("test")))
+			equals(t, res.Profile.Username, "test")
+
+			ok(t, store.FindOne(res, bh.Where("Profile.Credential.Username").Eq("test").Index("Username")))
+			equals(t, res.Profile.Username, "test")
+		})
+	})
+	t.Run("Select Nested Anon with non field name index", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Credential: &Credential{
+						Username: "test",
+						Password: "test",
+					},
+					Address: "test",
+				},
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			res := &User{}
+
+			ok(t, store.FindOne(res, bh.Where("Account.GuardianName").Eq("Test")))
+			equals(t, res.GuardianName, "Test")
+
+			ok(t, store.FindOne(res, bh.Where("GuardianName").Eq("Test")))
+			equals(t, res.GuardianName, "Test")
+
+			ok(t, store.FindOne(res, bh.Where("Account.GuardianName").Eq("Test").Index("Guardian")))
+			equals(t, res.GuardianName, "Test")
+
+			ok(t, store.FindOne(res, bh.Where("GuardianName").Eq("Test").Index("Guardian")))
+			equals(t, res.GuardianName, "Test")
+		})
+	})
+}
