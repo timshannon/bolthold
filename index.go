@@ -49,7 +49,7 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 			return err
 		}
 		if indexKey == nil {
-			return nil
+			continue
 		}
 		err = s.updateIndex(storer.Type(), name, indexKey, source, key, delete)
 		if err != nil {
@@ -63,11 +63,11 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 		if err != nil {
 			return err
 		}
-		if indexKeys == nil {
-			return nil
-		}
 
 		for i := range indexKeys {
+			if indexKeys[i] == nil {
+				continue
+			}
 			err = s.updateIndex(storer.Type(), name, indexKeys[i], source, key, delete)
 			if err != nil {
 				return err

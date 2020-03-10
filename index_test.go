@@ -6,6 +6,7 @@ package bolthold_test
 
 import (
 	"testing"
+	"time"
 
 	bh "github.com/timshannon/bolthold"
 	bolt "go.etcd.io/bbolt"
@@ -240,5 +241,99 @@ func Test94NilAnonIndexPointer(t *testing.T) {
 			return nil
 		}))
 
+	})
+}
+
+func Test98MultipleAnonIndex(t *testing.T) {
+	type (
+		Profile struct {
+			Username string `boltholdIndex:"Username"`
+			Password string
+		}
+		Account struct {
+			GuardianName string `boltholdIndex:"GuardianName"`
+			Create       time.Time
+		}
+
+		User struct {
+			*Profile
+			*Account
+
+			ID   string
+			Name string
+		}
+	)
+
+	t.Run("one nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket == nil, "Found index where none should've been added")
+
+				bucket = tx.Bucket(indexName("User", "GuardianName"))
+				assert(t, bucket != nil, "No index found for GuardianName")
+				return nil
+			}))
+
+		})
+	})
+
+	t.Run("neither nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+				Profile: &Profile{
+					Username: "test",
+					Password: "test",
+				},
+				Account: &Account{
+					GuardianName: "Test",
+					Create:       time.Now(),
+				},
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket != nil, "No index found for Username")
+
+				bucket = tx.Bucket(indexName("User", "GuardianName"))
+				assert(t, bucket != nil, "No index found for GuardianName")
+				return nil
+			}))
+		})
+	})
+
+	t.Run("both nil", func(t *testing.T) {
+		testWrap(t, func(store *bh.Store, t *testing.T) {
+			ok(t, store.Insert(1, &User{
+				ID:   "1234",
+				Name: "Tester",
+			}))
+
+			b := store.Bolt()
+
+			ok(t, b.View(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket(indexName("User", "Username"))
+				assert(t, bucket == nil, "Index found for Username")
+
+				bucket = tx.Bucket(indexName("User", "GuardianName"))
+				assert(t, bucket == nil, "Index found for GuardianName")
+				return nil
+			}))
+		})
 	})
 }

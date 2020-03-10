@@ -208,96 +208,109 @@ func (s *Store) newStorer(dataType interface{}) Storer {
 		panic("Invalid Type for Storer.  BoltHold only works with structs")
 	}
 
-	addIndex := func(field reflect.StructField) {
-		if strings.Contains(string(field.Tag), BoltholdIndexTag) {
-			indexName := field.Tag.Get(BoltholdIndexTag)
-
-			if indexName != "" {
-				indexName = field.Name
-			}
-
-			storer.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
-				tp := reflect.ValueOf(value)
-				for tp.Kind() == reflect.Ptr {
-					tp = tp.Elem()
-				}
-
-				tpType := tp.Type()
-				for i := 0; i < tpType.NumField(); i++ {
-					if tpType.Field(i).Anonymous {
-						anonValue := tp.Field(i)
-
-						anonType := anonValue.Type()
-						if anonType.Kind() == reflect.Ptr {
-							if anonValue.IsNil() {
-								return nil, nil
-							}
-							anonType = anonType.Elem()
-						}
-						for j := 0; j < anonType.NumField(); j++ {
-							if anonType.Field(j).Name == name {
-
-								return s.encode(anonValue.Interface())
-							}
-						}
-					} else {
-						if tpType.Field(i).Name == name {
-							return s.encode(tp.Field(i).Interface())
-						}
-					}
-				}
-				panic("Field " + name + " does not exist in this value")
-			}
-		}
-		if strings.Contains(string(field.Tag), BoltholdSliceIndexTag) {
-			indexName := field.Tag.Get(BoltholdSliceIndexTag)
-
-			if indexName != "" {
-				indexName = field.Name
-			}
-
-			storer.sliceIndexes[indexName] = func(name string, value interface{}) ([][]byte, error) {
-				tp := reflect.ValueOf(value)
-				for tp.Kind() == reflect.Ptr {
-					tp = tp.Elem()
-				}
-				fld := tp.FieldByName(name)
-
-				if fld.Kind() != reflect.Slice {
-					return nil, fmt.Errorf("Type %s is not a slice", fld.Type())
-				}
-
-				indexValue := make(keyList, 0)
-
-				for i := 0; i < fld.Len(); i++ {
-					b, err := s.encode(fld.Index(i).Interface())
-					if err != nil {
-						return nil, err
-					}
-					indexValue.add(b)
-				}
-
-				return indexValue, nil
-			}
-		}
-	}
-
 	for i := 0; i < storer.rType.NumField(); i++ {
-		field := storer.rType.Field(i)
-		if field.Anonymous {
-			anonType := field.Type
-			if anonType.Kind() == reflect.Ptr {
-				anonType = anonType.Elem()
-			}
-			for j := 0; j < anonType.NumField(); j++ {
-				addIndex(anonType.Field(j))
-			}
-		} else {
-			addIndex(field)
-		}
+		storer.addIndex(storer.rType.Field(i), s)
 	}
 
 	return storer
+}
+
+func (t *anonStorer) addIndex(field reflect.StructField, store *Store) {
+	if field.Anonymous {
+		anonType := field.Type
+		if anonType.Kind() == reflect.Ptr {
+			anonType = anonType.Elem()
+		}
+		for j := 0; j < anonType.NumField(); j++ {
+			t.addIndex(anonType.Field(j), store)
+		}
+		return
+	}
+
+	if strings.Contains(string(field.Tag), BoltholdIndexTag) {
+		indexName := field.Tag.Get(BoltholdIndexTag)
+
+		if indexName == "" {
+			indexName = field.Name
+		}
+
+		t.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
+			val := findIndexValue(name, value, BoltholdIndexTag)
+			if val == nil {
+				return nil, nil
+			}
+			return store.encode(val)
+		}
+	}
+	if strings.Contains(string(field.Tag), BoltholdSliceIndexTag) {
+		indexName := field.Tag.Get(BoltholdSliceIndexTag)
+
+		if indexName == "" {
+			indexName = field.Name
+		}
+
+		t.sliceIndexes[indexName] = func(name string, value interface{}) ([][]byte, error) {
+			val := reflect.ValueOf(value)
+			for val.Kind() == reflect.Ptr {
+				if val.IsNil() {
+					return nil, nil
+				}
+				val = val.Elem()
+			}
+
+			fldValue := findIndexValue(name, value, BoltholdSliceIndexTag)
+			if fldValue == nil {
+				return nil, nil
+			}
+			fld := reflect.ValueOf(fldValue)
+
+			if fld.Kind() != reflect.Slice {
+				return nil, fmt.Errorf("Type %s is not a slice", fld.Type())
+			}
+
+			indexValue := make(keyList, 0)
+
+			for i := 0; i < fld.Len(); i++ {
+				b, err := store.encode(fld.Index(i).Interface())
+				if err != nil {
+					return nil, err
+				}
+				indexValue.add(b)
+			}
+
+			return indexValue, nil
+		}
+	}
+}
+
+// returns the value in the field with the matching indexStruct tag
+func findIndexValue(name string, value interface{}, tag string) interface{} {
+	val := reflect.ValueOf(value)
+	if val.Kind() == reflect.Ptr && val.IsNil() {
+		return nil
+	}
+	for val.Kind() == reflect.Ptr {
+		val = val.Elem()
+	}
+
+	valType := val.Type()
+	for i := 0; i < valType.NumField(); i++ {
+		if valType.Field(i).Anonymous {
+			anonVal := findIndexValue(name, val.Field(i).Interface(), tag)
+
+			if anonVal != nil {
+				return anonVal
+			}
+			continue
+		}
+		field := valType.Field(i)
+		if strings.Contains(string(field.Tag), tag) {
+			if field.Tag.Get(tag) == name || field.Name == name {
+				return val.Field(i).Interface()
+			}
+		}
+	}
+	return nil
 }
 
 // BucketSource is the source of a bucket for running a query or updating data
