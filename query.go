@@ -165,18 +165,15 @@ func (s *Store) runQuerySort(source BucketSource, dataType interface{}, query *Q
 
 	sort.Slice(records, func(i, j int) bool {
 		for _, field := range query.sort {
-			val, err := fieldValue(records[i].value.Elem(), field)
-			if err != nil {
-				panic(err.Error()) // shouldn't happen due to field check above
-			}
-			value := val.Interface()
-
-			val, err = fieldValue(records[j].value.Elem(), field)
+			value, err := fieldValue(records[i].value.Elem(), field)
 			if err != nil {
 				panic(err.Error()) // shouldn't happen due to field check above
 			}
 
-			other := val.Interface()
+			other, err := fieldValue(records[j].value.Elem(), field)
+			if err != nil {
+				panic(err.Error()) // shouldn't happen due to field check above
+			}
 
 			if query.reverse {
 				value, other = other, value
