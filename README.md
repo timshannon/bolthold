@@ -81,7 +81,7 @@ It'll work, but you'll be reading more records than you'd expect.  You'd only "s
 categories exactly match.
 
 If instead you want to index each individual item in the slice, you can use the struct tag `boltholdSliceIndex`. It
-will then individually index eacy item in the slice, and potentially give you performance benefits if you have a lot
+will then individually index each item in the slice, and potentially give you performance benefits if you have a lot
 of overlap with individual items in your sliced fields.
 
 Be sure to benchmark both a regular index and a sliced index to see which performs better for your specific dataset.
