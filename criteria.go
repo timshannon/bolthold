@@ -245,7 +245,7 @@ func (q *Query) matchesAllFields(s *Store, key []byte, value reflect.Value, curr
 			return false, err
 		}
 
-		ok, err := matchesAllCriteria(s, criteria, fVal.Interface(), false, currentRow)
+		ok, err := matchesAllCriteria(s, criteria, fVal, false, currentRow)
 		if err != nil {
 			return false, err
 		}
@@ -257,21 +257,57 @@ func (q *Query) matchesAllFields(s *Store, key []byte, value reflect.Value, curr
 	return true, nil
 }
 
-func fieldValue(value reflect.Value, field string) (reflect.Value, error) {
-	fields := strings.Split(field, ".")
-
+func fieldValue(value reflect.Value, field string) (interface{}, error) {
 	current := value
-	for i := range fields {
-		if current.Kind() == reflect.Ptr {
-			current = current.Elem().FieldByName(fields[i])
-		} else {
-			current = current.FieldByName(fields[i])
+
+	if current.Kind() == reflect.Ptr {
+		if current.IsNil() {
+			return reflect.Value{}, nil
 		}
-		if !current.IsValid() {
-			return reflect.Value{}, fmt.Errorf("The field %s does not exist in the type %s", field, value)
-		}
+		current = current.Elem()
 	}
-	return current, nil
+
+	if field == "" {
+		if !value.IsValid() {
+			return reflect.Value{}, fmt.Errorf("The field %s does not exist in the type %s", field,
+				value.Interface())
+		}
+		return value.Interface(), nil
+	}
+
+	split := strings.SplitN(field, ".", 2)
+
+	currentField := split[0]
+	remainder := ""
+	if len(split) != 1 {
+		remainder = split[1]
+	}
+
+	typ := current.Type()
+	f, ok := typ.FieldByNameFunc(func(name string) bool {
+		return name == currentField
+	})
+
+	if !ok {
+		return reflect.Value{}, fmt.Errorf("The field %s does not exist in the type %s", field,
+			value.Interface())
+	}
+
+	// test is any fields in this index chain are anonymous and nil
+	v := current
+	for _, index := range f.Index {
+		vField := v.Field(index)
+		if vField.Kind() == reflect.Ptr {
+			if vField.IsNil() {
+				return reflect.Value{}, nil
+			}
+			vField = vField.Elem()
+		}
+		v = vField
+	}
+
+	return fieldValue(current.FieldByIndex(f.Index), remainder)
+
 }
 
 func (c *Criterion) op(op int, value interface{}) *Query {
