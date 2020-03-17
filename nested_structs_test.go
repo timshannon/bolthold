@@ -6,6 +6,7 @@ package bolthold_test
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -649,10 +650,25 @@ func TestIssue100(t *testing.T) {
 			District: "West",
 		})
 
+		store.Insert("newID", &User{
+			ID:       "newID",
+			District: "East",
+			Profile: &Profile{
+				Username:   "bolt",
+				Name:       "Bolt DB",
+				Phone:      "123-123-1234",
+				Address1:   "123 Test Street",
+				Address2:   "Suite 100",
+				City:       "Test City",
+				State:      "CA",
+				PostalCode: "11111",
+			},
+		})
+
 		users := []*User{}
-		query := bolthold.Where("Name").Eq("blah")
+		query := bolthold.Where("Name").RegExp(regexp.MustCompile("(?i:.*?bolt.*?)"))
 		ok(t, store.Find(&users, query))
 
-		equals(t, len(users), 0)
+		equals(t, len(users), 1)
 	})
 }
