@@ -95,3 +95,19 @@ func TestGetKeyStructTagIntoPtr(t *testing.T) {
 		}
 	})
 }
+
+func TestIssue103(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type Counterer struct {
+			State uint
+		}
+
+		count := new(Counterer)
+
+		count.State++
+		ok(t, store.Upsert("count", count))
+
+		ok(t, store.Get("count", &count))
+
+	})
+}
