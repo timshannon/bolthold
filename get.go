@@ -56,7 +56,11 @@ func (s *Store) get(source BucketSource, key, result interface{}) error {
 		return err
 	}
 
-	tp := reflect.TypeOf(result).Elem()
+	tp := reflect.TypeOf(result)
+	for tp.Kind() == reflect.Ptr {
+		tp = tp.Elem()
+	}
+
 	var keyField string
 
 	for i := 0; i < tp.NumField(); i++ {
