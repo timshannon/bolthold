@@ -134,6 +134,10 @@ func (q *Query) And(field string) *Criterion {
 		panic("The first letter of a field in a bolthold query must be upper-case")
 	}
 
+	if q.fieldCriteria == nil {
+		q.fieldCriteria = make(map[string][]*Criterion)
+	}
+
 	q.currentField = field
 	return &Criterion{
 		query: q,
