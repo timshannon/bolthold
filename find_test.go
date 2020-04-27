@@ -394,6 +394,26 @@ var testResults = []test{
 		result: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	},
 	test{
+		name:   "Empty Query",
+		query:  &bolthold.Query{},
+		result: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Empty Limit Query",
+		query:  (&bolthold.Query{}).Limit(10),
+		result: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+	},
+	test{
+		name:   "Empty Skip Query",
+		query:  (&bolthold.Query{}).Skip(10),
+		result: []int{10, 11, 12, 13, 14, 15, 16},
+	},
+	test{
+		name:   "Empty And Query",
+		query:  (&bolthold.Query{}).And("ID").Lt(5),
+		result: []int{0, 1, 2, 3, 5},
+	},
+	test{
 		name:   "Nil Comparison",
 		query:  bolthold.Where("Tags").IsNil(),
 		result: []int{0, 1, 2, 3, 5, 6, 8, 9, 11, 13, 14, 16},
