@@ -163,6 +163,26 @@ func (v *keyList) in(key []byte) bool {
 	return (i < len(*v) && bytes.Equal((*v)[i], key))
 }
 
+// seekCursor sets the cursor to the first k/v and return it,
+// however if there is only one critrion and it is either > = or >= then we can seek to the value and
+// save reads
+func (s *Store) seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
+	if len(criteria) != 1 || criteria[0].negate {
+		return cursor.First()
+	}
+
+	if criteria[0].operator == gt || criteria[0].operator == ge || criteria[0].operator == eq {
+		seek, err := s.encode(criteria[0].value)
+		if err != nil {
+			return cursor.First()
+		}
+
+		return cursor.Seek(seek)
+	}
+
+	return cursor.First()
+}
+
 type iterator struct {
 	keyCache    [][]byte
 	dataBucket  *bolt.Bucket
@@ -195,7 +215,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = cursor.First()
+					// k, _ = cursor.First()
+					k, _ = s.seekCursor(cursor, criteria)
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -243,7 +264,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = cursor.First()
+					// k, _ = cursor.First()
+					k, _ = s.seekCursor(cursor, criteria)
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -269,7 +291,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 		for len(nKeys) < iteratorKeyMinCacheSize {
 			var k, v []byte
 			if prepCursor {
-				k, v = cursor.First()
+				// k, v = cursor.First()
+				k, v = s.seekCursor(cursor, criteria)
 				prepCursor = false
 			} else {
 				k, v = cursor.Next()

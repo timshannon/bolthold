@@ -22,22 +22,22 @@ type Item struct {
 
 func Example() {
 	data := []Item{
-		Item{
+		{
 			ID:       0,
 			Category: "blue",
 			Created:  time.Now().Add(-4 * time.Hour),
 		},
-		Item{
+		{
 			ID:       1,
 			Category: "red",
 			Created:  time.Now().Add(-3 * time.Hour),
 		},
-		Item{
+		{
 			ID:       2,
 			Category: "blue",
 			Created:  time.Now().Add(-2 * time.Hour),
 		},
-		Item{
+		{
 			ID:       3,
 			Category: "blue",
 			Created:  time.Now().Add(-20 * time.Minute),
