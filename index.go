@@ -163,12 +163,13 @@ func (v *keyList) in(key []byte) bool {
 	return (i < len(*v) && bytes.Equal((*v)[i], key))
 }
 
-// seekCursor sets the cursor to the first k/v and return it,
-// however if there is only one critrion and it is either > = or >= then we can seek to the value and
-// save reads
+// seekCursor attempts to save reads by seeking the cursor past values it doesn't need to compare since keys
+// are stored in order
 func (s *Store) seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
+	firstKey, firstValue := cursor.First()
+
 	if len(criteria) != 1 || criteria[0].negate {
-		return cursor.First()
+		return firstKey, firstValue
 	}
 
 	if criteria[0].operator == gt || criteria[0].operator == ge || criteria[0].operator == eq {
@@ -177,7 +178,9 @@ func (s *Store) seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, val
 			return cursor.First()
 		}
 
-		return cursor.Seek(seek)
+		if bytes.Compare(firstKey, seek) > 0 {
+			return cursor.Seek(seek)
+		}
 	}
 
 	return cursor.First()
