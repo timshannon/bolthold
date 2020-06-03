@@ -13,3 +13,20 @@ BenchmarkFindNoIndex-12          	      61	  19135152 ns/op
 BenchmarkFindIndexed-12          	    6210	    201027 ns/op
 PASS
 ok  	github.com/timshannon/bolthold	35.811s
+
+
+Commit:
+v1.1-80-g2329475
+goos: linux
+goarch: amd64
+pkg: github.com/timshannon/bolthold
+BenchmarkRawInsert-12            	     520	   2425421 ns/op
+BenchmarkNoIndexInsert-12        	     482	   2370255 ns/op
+BenchmarkIndexedInsert-12        	     486	   2420279 ns/op
+BenchmarkNoIndexUpsert-12        	     481	   2355749 ns/op
+BenchmarkIndexedUpsert-12        	     514	   2448057 ns/op
+BenchmarkNoIndexInsertJSON-12    	     501	   2412249 ns/op
+BenchmarkFindNoIndex-12          	      63	  18751181 ns/op
+BenchmarkFindIndexed-12          	    5850	    196390 ns/op
+PASS
+ok  	github.com/timshannon/bolthold	34.532s
