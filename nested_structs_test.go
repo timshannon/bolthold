@@ -37,7 +37,7 @@ type Level2 struct {
 }
 
 var nestedData = []Nested{
-	Nested{
+	{
 		Key: 0,
 		Embed: Embed{
 			Color: "red",
@@ -55,7 +55,7 @@ var nestedData = []Nested{
 			Name: "Joe",
 		},
 	},
-	Nested{
+	{
 		Key: 1,
 		Embed: Embed{
 			Color: "red",
@@ -73,7 +73,7 @@ var nestedData = []Nested{
 			Name: "Jill",
 		},
 	},
-	Nested{
+	{
 		Key: 2,
 		Embed: Embed{
 			Color: "orange",
@@ -91,7 +91,7 @@ var nestedData = []Nested{
 			Name: "Jill",
 		},
 	},
-	Nested{
+	{
 		Key: 3,
 		Embed: Embed{
 			Color: "orange",
@@ -108,7 +108,7 @@ var nestedData = []Nested{
 			Name: "Jill",
 		},
 	},
-	Nested{
+	{
 		Key: 4,
 		Embed: Embed{
 			Color: "blue",
@@ -128,37 +128,37 @@ var nestedData = []Nested{
 }
 
 var nestedTests = []test{
-	test{
+	{
 		name:   "Nested",
 		query:  bolthold.Where("L1.Name").Eq("Joe"),
 		result: []int{0},
 	},
-	test{
+	{
 		name:   "Embedded",
 		query:  bolthold.Where("Color").Eq("red"),
 		result: []int{0, 1},
 	},
-	test{
+	{
 		name:   "Embedded Explicit",
 		query:  bolthold.Where("Embed.Color").Eq("red"),
 		result: []int{0, 1},
 	},
-	test{
+	{
 		name:   "Nested Multiple Levels",
 		query:  bolthold.Where("L2.L3.Name").Eq("Joe"),
 		result: []int{0, 3},
 	},
-	test{
+	{
 		name:   "Pointer",
 		query:  bolthold.Where("Pointer.Name").Eq("Jill"),
 		result: []int{1, 2, 3},
 	},
-	test{
+	{
 		name:   "Sort",
 		query:  bolthold.Where("Key").Ge(0).SortBy("L2.L3.Name"),
 		result: []int{4, 1, 2, 0, 3},
 	},
-	test{
+	{
 		name:   "Sort On Pointer",
 		query:  bolthold.Where("Key").Ge(0).SortBy("Pointer.Name"),
 		result: []int{4, 1, 2, 0, 3},
@@ -621,9 +621,9 @@ func TestNestedAnonIndex(t *testing.T) {
 func TestIssue100(t *testing.T) {
 	type (
 		Profile struct {
-			Username   string `boltholdIndex:"Username" json:"name"`
-			Name       string `boltholdIndex:"Name" json:"name"`
-			Phone      string `boltholdIndex:"Phone" json:"name"`
+			Username   string `boltholdIndex:"Username"`
+			Name       string `boltholdIndex:"Name"`
+			Phone      string `boltholdIndex:"Phone"`
 			Address1   string `json:"address1"`
 			Address2   string `json:"address2"`
 			City       string `json:"city"`

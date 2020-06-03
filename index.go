@@ -163,6 +163,29 @@ func (v *keyList) in(key []byte) bool {
 	return (i < len(*v) && bytes.Equal((*v)[i], key))
 }
 
+// seekCursor attempts to save reads by seeking the cursor past values it doesn't need to compare since keys
+// are stored in order
+func (s *Store) seekCursor(cursor *bolt.Cursor, criteria []*Criterion) (key, value []byte) {
+	firstKey, firstValue := cursor.First()
+
+	if len(criteria) != 1 || criteria[0].negate {
+		return firstKey, firstValue
+	}
+
+	if criteria[0].operator == gt || criteria[0].operator == ge || criteria[0].operator == eq {
+		seek, err := s.encode(criteria[0].value)
+		if err != nil {
+			return cursor.First()
+		}
+
+		if bytes.Compare(firstKey, seek) > 0 {
+			return cursor.Seek(seek)
+		}
+	}
+
+	return cursor.First()
+}
+
 type iterator struct {
 	keyCache    [][]byte
 	dataBucket  *bolt.Bucket
@@ -195,7 +218,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = cursor.First()
+					// k, _ = cursor.First()
+					k, _ = s.seekCursor(cursor, criteria)
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -243,7 +267,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 			for len(nKeys) < iteratorKeyMinCacheSize {
 				var k []byte
 				if prepCursor {
-					k, _ = cursor.First()
+					// k, _ = cursor.First()
+					k, _ = s.seekCursor(cursor, criteria)
 					prepCursor = false
 				} else {
 					k, _ = cursor.Next()
@@ -269,7 +294,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 		for len(nKeys) < iteratorKeyMinCacheSize {
 			var k, v []byte
 			if prepCursor {
-				k, v = cursor.First()
+				// k, v = cursor.First()
+				k, v = s.seekCursor(cursor, criteria)
 				prepCursor = false
 			} else {
 				k, v = cursor.Next()

@@ -37,7 +37,7 @@ func (i *ItemTest) Compare(other interface{}) (int, error) {
 func TestFindWithComparer(t *testing.T) {
 	testWrap(t, func(store *bolthold.Store, t *testing.T) {
 		data := []CItemTest{
-			CItemTest{
+			{
 				Inner: ItemTest{
 					Key:      0,
 					ID:       0,
@@ -46,7 +46,7 @@ func TestFindWithComparer(t *testing.T) {
 					Created:  time.Now().AddDate(-1, 0, 0),
 				},
 			},
-			CItemTest{
+			{
 				Inner: ItemTest{
 					Key:      1,
 					ID:       1,
@@ -55,7 +55,7 @@ func TestFindWithComparer(t *testing.T) {
 					Created:  time.Now().AddDate(0, 30, 0),
 				},
 			},
-			CItemTest{
+			{
 				Inner: ItemTest{
 					Key:      2,
 					ID:       2,
@@ -149,7 +149,7 @@ var allCurrent = All{ // current
 }
 
 var allData = []All{
-	All{ // equal
+	{ // equal
 		ATime:  time.Date(2016, 1, 1, 0, 0, 0, 0, time.Local),
 		AFloat: big.NewFloat(30.5),
 		AInt:   big.NewInt(123),
@@ -173,7 +173,7 @@ var allData = []All{
 		Astring:  "btest",
 		ADefault: DefaultType{"btest"},
 	},
-	All{ // greater
+	{ // greater
 		ATime:  time.Date(2017, 1, 1, 0, 0, 0, 0, time.Local),
 		AFloat: big.NewFloat(31.5),
 		AInt:   big.NewInt(128),
@@ -197,7 +197,7 @@ var allData = []All{
 		Astring:  "ctest",
 		ADefault: DefaultType{"ctest"},
 	},
-	All{ // less
+	{ // less
 		ATime:  time.Date(2015, 1, 1, 0, 0, 0, 0, time.Local),
 		AFloat: big.NewFloat(30.1),
 		AInt:   big.NewInt(121),

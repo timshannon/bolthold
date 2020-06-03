@@ -12,62 +12,62 @@ import (
 )
 
 var sortTests = []test{
-	test{
+	{
 		name:   "Sort By Name",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name"),
 		result: []int{9, 5, 14, 8, 13, 2, 16},
 	},
-	test{
+	{
 		name:   "Sort By Name Reversed",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Reverse(),
 		result: []int{16, 2, 13, 8, 14, 5, 9},
 	},
-	test{
+	{
 		name:   "Sort By Multiple Fields",
 		query:  bolthold.Where("ID").In(8, 3, 13).SortBy("Category", "Name"),
 		result: []int{13, 15, 4, 3},
 	},
-	test{
+	{
 		name:   "Sort By Multiple Fields Reversed",
 		query:  bolthold.Where("ID").In(8, 3, 13).SortBy("Category", "Name").Reverse(),
 		result: []int{3, 4, 15, 13},
 	},
-	test{
+	{
 		name:   "Sort By Duplicate Field Names",
 		query:  bolthold.Where("ID").In(8, 3, 13).SortBy("Category", "Name", "Category"),
 		result: []int{13, 15, 4, 3},
 	},
-	test{
+	{
 		name:   "Sort By Name with limit",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Limit(3),
 		result: []int{9, 5, 14},
 	},
-	test{
+	{
 		name:   "Sort By Name with skip",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(3),
 		result: []int{8, 13, 2, 16},
 	},
-	test{
+	{
 		name:   "Sort By Name with skip and limit",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
 		result: []int{14, 8, 13},
 	},
-	test{
+	{
 		name:   "Sort By Name Reversed with limit",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
 		result: []int{14, 8, 13},
 	},
-	test{
+	{
 		name:   "Sort By Name Reversed with skip",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(4),
 		result: []int{13, 2, 16},
 	},
-	test{
+	{
 		name:   "Sort By Name Reversed with skip and limit",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(2).Limit(3),
 		result: []int{14, 8, 13},
 	},
-	test{
+	{
 		name:   "Sort By Name with skip greater than length",
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(10),
 		result: []int{},

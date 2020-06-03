@@ -14,22 +14,22 @@ import (
 func TestIndexSlice(t *testing.T) {
 	testWrap(t, func(store *bh.Store, t *testing.T) {
 		var testData = []ItemTest{
-			ItemTest{
+			{
 				Key:  0,
 				Name: "John",
 				Tags: []string{"red", "green", "blue"},
 			},
-			ItemTest{
+			{
 				Key:  1,
 				Name: "Bill",
 				Tags: []string{"red", "purple"},
 			},
-			ItemTest{
+			{
 				Key:  2,
 				Name: "Jane",
 				Tags: []string{"red", "orange"},
 			},
-			ItemTest{
+			{
 				Key:  3,
 				Name: "Brian",
 				Tags: []string{"red", "purple"},
