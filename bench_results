@@ -1,0 +1,15 @@
+Commit:
+v1.1-79-gfa67e4f
+goos: linux
+goarch: amd64
+pkg: github.com/timshannon/bolthold
+BenchmarkRawInsert-12            	     518	   2474725 ns/op
+BenchmarkNoIndexInsert-12        	     493	   2428304 ns/op
+BenchmarkIndexedInsert-12        	     481	   2443943 ns/op
+BenchmarkNoIndexUpsert-12        	     489	   2481539 ns/op
+BenchmarkIndexedUpsert-12        	     457	   2386126 ns/op
+BenchmarkNoIndexInsertJSON-12    	     490	   2448945 ns/op
+BenchmarkFindNoIndex-12          	      61	  19135152 ns/op
+BenchmarkFindIndexed-12          	    6210	    201027 ns/op
+PASS
+ok  	github.com/timshannon/bolthold	35.811s

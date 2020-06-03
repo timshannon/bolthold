@@ -24,6 +24,9 @@ const indexBucketPrefix = "_index"
 // size of iterator keys stored in memory before more are fetched
 const iteratorKeyMinCacheSize = 100
 
+var indexSep = []byte("||")
+var indexPrefixV2 = []byte("_v2")
+
 // Index is a function that returns the indexable, encoded bytes of the passed in value
 type Index func(name string, value interface{}) ([]byte, error)
 
@@ -82,7 +85,7 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
 
-	indexValue := make(keyList, 0)
+	var indexValue keyList
 
 	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
 	if err != nil {
@@ -91,10 +94,13 @@ func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source 
 
 	iVal := b.Get(indexKey)
 	if iVal != nil {
-		err = s.decode(iVal, &indexValue)
-		if err != nil {
-			return err
-		}
+		// err = s.decode(iVal, &indexValue)
+		// if err != nil {
+		// 	return err
+		// }
+		indexValue = s.decodeKeyList(iVal)
+	} else {
+		indexValue = make(keyList, 0)
 	}
 
 	if delete {
@@ -107,10 +113,11 @@ func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source 
 		return b.Delete(indexKey)
 	}
 
-	iVal, err = s.encode(indexValue)
-	if err != nil {
-		return err
-	}
+	// iVal, err = s.encode(indexValue)
+	iVal = s.encodeKeyList(indexValue)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return b.Put(indexKey, iVal)
 }
@@ -161,6 +168,22 @@ func (v *keyList) in(key []byte) bool {
 	})
 
 	return (i < len(*v) && bytes.Equal((*v)[i], key))
+}
+
+func (s *Store) encodeKeyList(v keyList) []byte {
+	b := bytes.Join(v, indexSep)
+
+	return append(indexPrefixV2, b...)
+}
+
+func (s *Store) decodeKeyList(data []byte) keyList {
+	if bytes.HasPrefix(data, indexPrefixV2) {
+		return keyList(bytes.Split(data[len(indexPrefixV2):], indexSep))
+	}
+	// use old method for decoding indexes
+	keys := make(keyList, 0)
+	s.decode(data, &keys)
+	return keys
 }
 
 // seekCursor attempts to save reads by seeking the cursor past values it doesn't need to compare since keys
@@ -312,11 +335,11 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 
 			if ok {
 				// append the slice of keys stored in the index
-				var keys = make(keyList, 0)
-				err := s.decode(v, &keys)
-				if err != nil {
-					return nil, err
-				}
+				keys := s.decodeKeyList(v)
+				// err := s.decode(v, &keys)
+				// if err != nil {
+				// 	return nil, err
+				// }
 
 				nKeys = append(nKeys, [][]byte(keys)...)
 			}
