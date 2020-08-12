@@ -5,10 +5,12 @@
 package bolthold_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/timshannon/bolthold"
+	bh "github.com/timshannon/bolthold"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -177,5 +179,22 @@ func TestDeleteNotFound(t *testing.T) {
 				bolthold.ErrNotFound, err)
 		}
 
+	})
+}
+
+func TestDeleteEOFIssue116(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type Item struct{ Name string }
+
+		ok(t, store.Insert("key", &Item{"Name"}))
+
+		empty := &Item{}
+
+		for i := 1; i < 5; i++ {
+			err := store.Delete("key", empty)
+			if err != nil && !errors.Is(err, bh.ErrNotFound) {
+				t.Fatalf("unexpected error after delete #%d: %v", i, err)
+			}
+		}
 	})
 }

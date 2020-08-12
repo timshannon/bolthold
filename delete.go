@@ -50,6 +50,9 @@ func (s *Store) delete(source BucketSource, key, dataType interface{}) error {
 	value := reflect.New(reflect.TypeOf(dataType)).Interface()
 
 	bVal := b.Get(gk)
+	if bVal == nil {
+		return ErrNotFound
+	}
 
 	err = s.decode(bVal, value)
 	if err != nil {
