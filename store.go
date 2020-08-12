@@ -320,3 +320,12 @@ type BucketSource interface {
 	Bucket(name []byte) *bolt.Bucket
 	CreateBucketIfNotExists(name []byte) (*bolt.Bucket, error)
 }
+
+func newElemType(datatype interface{}) interface{} {
+	tp := reflect.TypeOf(datatype)
+	for tp.Kind() == reflect.Ptr {
+		tp = tp.Elem()
+	}
+
+	return reflect.New(tp).Interface()
+}

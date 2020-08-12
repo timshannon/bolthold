@@ -174,7 +174,7 @@ func (s *Store) update(source BucketSource, key interface{}, data interface{}) e
 	}
 
 	// delete any existing indexes
-	existingVal := reflect.New(reflect.TypeOf(data)).Interface()
+	existingVal := newElemType(data)
 
 	err = s.decode(existing, existingVal)
 	if err != nil {
@@ -242,9 +242,7 @@ func (s *Store) upsert(source BucketSource, key interface{}, data interface{}) e
 	existing := b.Get(gk)
 
 	if existing != nil {
-
-		// delete any existing indexes
-		existingVal := reflect.New(reflect.TypeOf(data)).Interface()
+		existingVal := newElemType(data)
 
 		err = s.decode(existing, existingVal)
 		if err != nil {
