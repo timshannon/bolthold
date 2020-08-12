@@ -467,9 +467,9 @@ func (c *Criterion) test(s *Store, testValue interface{}, encoded bool, currentR
 			// used with keys
 			if c.operator == in || c.operator == any || c.operator == all {
 				// value is a slice of values, use c.values
-				recordValue = reflect.New(reflect.TypeOf(c.values[0])).Interface()
+				recordValue = newElemType(c.values[0])
 			} else {
-				recordValue = reflect.New(reflect.TypeOf(c.value)).Interface()
+				recordValue = newElemType(c.value)
 			}
 			err := s.decode(testValue.([]byte), recordValue)
 			if err != nil {

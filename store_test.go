@@ -273,6 +273,36 @@ func tempfile() string {
 	return f.Name()
 }
 
+type Issue115 struct{ Name string }
+
+func (i *Issue115) Type() string { return "Item" }
+func (i *Issue115) Indexes() map[string]bolthold.Index {
+	return map[string]bolthold.Index{
+		"Name": func(_ string, value interface{}) ([]byte, error) {
+			// If the upsert wants to delete an existing value first,
+			// value could be a **Item instead of *Item
+			// panic: interface conversion: interface {} is **Item, not *Item
+			v := value.(*Issue115).Name
+			return []byte(v), nil
+		},
+	}
+}
+func (i *Issue115) SliceIndexes() map[string]bolthold.SliceIndex {
+	return map[string]bolthold.SliceIndex{}
+}
+
+func TestIssue115(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		item := &Issue115{"Name"}
+		for i := 0; i < 2; i++ {
+			err := store.Upsert("key", item)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	})
+}
+
 // Thanks Ben Johnson https://github.com/benbjohnson/testing
 
 // assert fails the test if the condition is false.

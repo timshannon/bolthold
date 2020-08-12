@@ -5,8 +5,6 @@
 package bolthold
 
 import (
-	"reflect"
-
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -47,7 +45,7 @@ func (s *Store) delete(source BucketSource, key, dataType interface{}) error {
 		return ErrNotFound
 	}
 
-	value := reflect.New(reflect.TypeOf(dataType)).Interface()
+	value := newElemType(dataType)
 
 	bVal := b.Get(gk)
 	if bVal == nil {
