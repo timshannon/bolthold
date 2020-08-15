@@ -87,3 +87,61 @@ func TestForEachInBucket(t *testing.T) {
 		}
 	})
 }
+
+func TestForEachKeyStructTag(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type KeyTest struct {
+			Key   int `boltholdKey:"Key"`
+			Value string
+		}
+
+		key := 3
+
+		err := store.Insert(key, &KeyTest{
+			Value: "test value",
+		})
+
+		if err != nil {
+			t.Fatalf("Error inserting KeyTest struct for Key struct tag testing. Error: %s", err)
+		}
+
+		err = store.ForEach(bolthold.Where(bolthold.Key).Eq(key), func(result *KeyTest) error {
+			if result.Key != key {
+				t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result.Key)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Error running ForEach in TestKeyStructTag. ERROR: %s", err)
+		}
+	})
+}
+
+func TestForEachKeyStructTagIntoPtr(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type KeyTest struct {
+			Key   *int `boltholdKey:"Key"`
+			Value string
+		}
+
+		key := 3
+
+		err := store.Insert(&key, &KeyTest{
+			Value: "test value",
+		})
+
+		if err != nil {
+			t.Fatalf("Error inserting KeyTest struct for Key struct tag testing. Error: %s", err)
+		}
+
+		err = store.ForEach(bolthold.Where(bolthold.Key).Eq(key), func(result *KeyTest) error {
+			if result.Key == nil || *result.Key != key {
+				t.Fatalf("Key struct tag was not set correctly.  Expected %d, got %d", key, result.Key)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Error running ForEach in TestKeyStructTag. ERROR: %s", err)
+		}
+	})
+}
