@@ -562,7 +562,29 @@ func (s *Store) forEach(source BucketSource, query *Query, fn interface{}) error
 
 	dataType := reflect.New(argType).Interface()
 
+	var keyType reflect.Type
+	var keyField string
+
+	for i := 0; i < argType.NumField(); i++ {
+		if strings.Contains(string(argType.Field(i).Tag), BoltholdKeyTag) {
+			keyType = argType.Field(i).Type
+			keyField = argType.Field(i).Name
+			break
+		}
+	}
+
 	return s.runQuery(source, dataType, query, nil, query.skip, func(r *record) error {
+		if keyType != nil {
+			rowKey := r.value
+			for rowKey.Kind() == reflect.Ptr {
+				rowKey = rowKey.Elem()
+			}
+			err := s.decode(r.key, rowKey.FieldByName(keyField).Addr().Interface())
+			if err != nil {
+				return err
+			}
+		}
+
 		out := fnVal.Call([]reflect.Value{r.value})
 		if len(out) != 1 {
 			return fmt.Errorf("foreach function does not return an error")
