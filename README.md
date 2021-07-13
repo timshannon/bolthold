@@ -1,6 +1,6 @@
 # BoltHold
 
-[![Build Status](https://travis-ci.org/timshannon/bolthold.svg?branch=master)](https://travis-ci.org/timshannon/bolthold) [![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://pkg.go.dev/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
+[![Go](https://github.com/timshannon/bolthold/actions/workflows/go.yml/badge.svg)](https://github.com/timshannon/bolthold/actions/workflows/go.yml)[![GoDoc](https://godoc.org/github.com/timshannon/bolthold?status.svg)](https://pkg.go.dev/github.com/timshannon/bolthold) [![Coverage Status](https://coveralls.io/repos/github/timshannon/bolthold/badge.svg?branch=master)](https://coveralls.io/github/timshannon/bolthold?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/timshannon/bolthold)](https://goreportcard.com/report/github.com/timshannon/bolthold)
 
 BoltHold is a simple querying and indexing layer on top of a Bolt DB instance. For a similar library built on [Badger](https://github.com/dgraph-io/badger) see [BadgerHold](https://github.com/timshannon/badgerhold).
 
