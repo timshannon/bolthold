@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/timshannon/bolthold"
 )
 
@@ -1225,5 +1226,26 @@ func Test67SeekCursor(t *testing.T) {
 		result = nil
 		ok(t, store.Find(&result, bolthold.Where(bolthold.Key).Gt(0)))
 		equals(t, 0, len(result))
+	})
+}
+
+func Test126FindOneVSGetOne(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type Test struct {
+			UUID uuid.UUID
+		}
+
+		id := uuid.New()
+
+		store.Upsert(id, Test{UUID: id})
+
+		result := Test{}
+		ok(t, store.FindOne(&result, bolthold.Where(bolthold.Key).Eq(id)))
+		equals(t, result.UUID, id)
+
+		result = Test{}
+		ok(t, store.Get(id, &result))
+		equals(t, result.UUID, id)
+
 	})
 }
