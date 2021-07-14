@@ -545,3 +545,108 @@ func TestInsertSetKey(t *testing.T) {
 
 	})
 }
+
+func TestUniqueConstraint(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+		type TestUnique struct {
+			Key  uint64 `boltholdKey:"Key"`
+			Name string `boltholdUnique:"Name"`
+		}
+
+		item := &TestUnique{
+			Name: "Tester Name",
+		}
+
+		err := store.Insert(bolthold.NextSequence(), item)
+		if err != nil {
+			t.Fatalf("Error inserting base record for unique testing: %s", err)
+		}
+
+		t.Run("Insert", func(t *testing.T) {
+			err = store.Insert(bolthold.NextSequence(), item)
+			if err != bolthold.ErrUniqueExists {
+				t.Fatalf("Inserting duplicate record did not result in a unique constraint error: "+
+					"Expected %s, Got %s", bolthold.ErrUniqueExists, err)
+			}
+		})
+
+		t.Run("Update", func(t *testing.T) {
+			update := &TestUnique{
+				Name: "Update Name",
+			}
+			err = store.Insert(bolthold.NextSequence(), update)
+
+			if err != nil {
+				t.Fatalf("Inserting record for update Unique testing failed: %s", err)
+			}
+			update.Name = item.Name
+
+			err = store.Update(update.Key, update)
+			if err != bolthold.ErrUniqueExists {
+				t.Fatalf("Duplicate record did not result in a unique constraint error: "+
+					"Expected %s, Got %s", bolthold.ErrUniqueExists, err)
+			}
+		})
+
+		t.Run("Upsert", func(t *testing.T) {
+			update := &TestUnique{
+				Name: "Upsert Name",
+			}
+			err = store.Insert(bolthold.NextSequence(), update)
+
+			if err != nil {
+				t.Fatalf("Inserting record for upsert Unique testing failed: %s", err)
+			}
+
+			update.Name = item.Name
+
+			err = store.Upsert(update.Key, update)
+			if err != bolthold.ErrUniqueExists {
+				t.Fatalf("Duplicate record did not result in a unique constraint error: "+
+					"Expected %s, Got %s", bolthold.ErrUniqueExists, err)
+			}
+		})
+
+		t.Run("UpdateMatching", func(t *testing.T) {
+			update := &TestUnique{
+				Name: "UpdateMatching Name",
+			}
+			err = store.Insert(bolthold.NextSequence(), update)
+
+			if err != nil {
+				t.Fatalf("Inserting record for updatematching Unique testing failed: %s", err)
+			}
+
+			err = store.UpdateMatching(TestUnique{}, bolthold.Where(bolthold.Key).Eq(update.Key),
+				func(r interface{}) error {
+					record, ok := r.(*TestUnique)
+					if !ok {
+						return fmt.Errorf("Record isn't the correct type!  Got %T",
+							r)
+					}
+
+					record.Name = item.Name
+
+					return nil
+				})
+			if err != bolthold.ErrUniqueExists {
+				t.Fatalf("Duplicate record did not result in a unique constraint error: "+
+					"Expected %s, Got %s", bolthold.ErrUniqueExists, err)
+			}
+
+		})
+
+		t.Run("Delete", func(t *testing.T) {
+			err = store.Delete(item.Key, TestUnique{})
+			if err != nil {
+				t.Fatalf("Error deleting record for unique testing %s", err)
+			}
+
+			err = store.Insert(bolthold.NextSequence(), item)
+			if err != nil {
+				t.Fatalf("Error inserting duplicate record that has been previously removed: %s", err)
+			}
+		})
+
+	})
+}

@@ -87,7 +87,6 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 // adds or removes a specific index on an item
 func (s *Store) updateIndex(typeName, indexName string, unique bool, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
-
 	indexValue := make(keyList, 0)
 
 	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
@@ -97,18 +96,20 @@ func (s *Store) updateIndex(typeName, indexName string, unique bool, indexKey []
 
 	iVal := b.Get(indexKey)
 	if iVal != nil {
+		if unique && !delete {
+			return ErrUniqueExists
+		}
+
 		err = s.decode(iVal, &indexValue)
 		if err != nil {
 			return err
 		}
+
 	}
 
 	if delete {
 		indexValue.remove(key)
 	} else {
-		if unique && indexValue.in(key) {
-			return ErrUniqueExists
-		}
 		indexValue.add(key)
 	}
 
