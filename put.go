@@ -14,6 +14,9 @@ import (
 // ErrKeyExists is the error returned when data is being Inserted for a Key that already exists
 var ErrKeyExists = errors.New("This Key already exists in this bolthold for this type")
 
+// ErrUniqueExists is the error thrown when data is being inserted for a unique constraint value that already exists
+var ErrUniqueExists = errors.New("This value cannot be written due to the unique constraint on the field")
+
 // sequence tells bolthold to insert the key as the next sequence in the bucket
 type sequence struct{}
 

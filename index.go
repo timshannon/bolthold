@@ -15,6 +15,9 @@ import (
 // BoltholdIndexTag is the struct tag used to define a field as indexable for a bolthold
 const BoltholdIndexTag = "boltholdIndex"
 
+// BoltholdUniqueTag is the struct tag used to define a field as unique constraint
+const BoltholdUniqueTag = "boltholdUnique"
+
 // BoltholdSliceIndexTag is the struct tag used to define a slice field as indexable, where each item in the
 // slice is indexed separately rather than as one index
 const BoltholdSliceIndexTag = "boltholdSliceIndex"
@@ -25,7 +28,10 @@ const indexBucketPrefix = "_index"
 const iteratorKeyMinCacheSize = 100
 
 // Index is a function that returns the indexable, encoded bytes of the passed in value
-type Index func(name string, value interface{}) ([]byte, error)
+type Index struct {
+	IndexFunc func(name string, value interface{}) ([]byte, error)
+	Unique    bool
+}
 
 // SliceIndex is a function that returns all of the indexable values in a slice
 type SliceIndex func(name string, value interface{}) ([][]byte, error)
@@ -44,14 +50,14 @@ func (s *Store) deleteIndexes(storer Storer, source BucketSource, key []byte, or
 func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, data interface{}, delete bool) error {
 	indexes := storer.Indexes()
 	for name, index := range indexes {
-		indexKey, err := index(name, data)
+		indexKey, err := index.IndexFunc(name, data)
 		if err != nil {
 			return err
 		}
 		if indexKey == nil {
 			continue
 		}
-		err = s.updateIndex(storer.Type(), name, indexKey, source, key, delete)
+		err = s.updateIndex(storer.Type(), name, index.Unique, indexKey, source, key, delete)
 		if err != nil {
 			return err
 		}
@@ -68,7 +74,7 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 			if indexKeys[i] == nil {
 				continue
 			}
-			err = s.updateIndex(storer.Type(), name, indexKeys[i], source, key, delete)
+			err = s.updateIndex(storer.Type(), name, false, indexKeys[i], source, key, delete)
 			if err != nil {
 				return err
 			}
@@ -79,9 +85,8 @@ func (s *Store) updateIndexes(storer Storer, source BucketSource, key []byte, da
 }
 
 // adds or removes a specific index on an item
-func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source BucketSource, key []byte,
+func (s *Store) updateIndex(typeName, indexName string, unique bool, indexKey []byte, source BucketSource, key []byte,
 	delete bool) error {
-
 	indexValue := make(keyList, 0)
 
 	b, err := source.CreateBucketIfNotExists(indexBucketName(typeName, indexName))
@@ -91,10 +96,15 @@ func (s *Store) updateIndex(typeName, indexName string, indexKey []byte, source 
 
 	iVal := b.Get(indexKey)
 	if iVal != nil {
+		if unique && !delete {
+			return ErrUniqueExists
+		}
+
 		err = s.decode(iVal, &indexValue)
 		if err != nil {
 			return err
 		}
+
 	}
 
 	if delete {
