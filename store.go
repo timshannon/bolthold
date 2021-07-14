@@ -227,19 +227,23 @@ func (t *anonStorer) addIndex(field reflect.StructField, store *Store) {
 		return
 	}
 
-	if strings.Contains(string(field.Tag), BoltholdIndexTag) {
+	if strings.Contains(string(field.Tag), BoltholdIndexTag) ||
+		strings.Contains(string(field.Tag), BoltholdUniqueTag) {
 		indexName := field.Tag.Get(BoltholdIndexTag)
 
 		if indexName == "" {
 			indexName = field.Name
 		}
 
-		t.indexes[indexName] = func(name string, value interface{}) ([]byte, error) {
-			val := findIndexValue(name, value, BoltholdIndexTag)
-			if val == nil {
-				return nil, nil
-			}
-			return store.encode(val)
+		t.indexes[indexName] = Index{
+			IndexFunc: func(name string, value interface{}) ([]byte, error) {
+				val := findIndexValue(name, value, BoltholdIndexTag)
+				if val == nil {
+					return nil, nil
+				}
+				return store.encode(val)
+			},
+			Unique: strings.Contains(string(field.Tag), BoltholdUniqueTag),
 		}
 	}
 	if strings.Contains(string(field.Tag), BoltholdSliceIndexTag) {
