@@ -256,6 +256,20 @@ t := []string{"1", "2", "3", "4"}
 where := bolthold.Where("Id").In(bolthold.Slice(t)...)
 ```
 
+### Unique Constraints
+
+You can create a unique constraint on a given field by using the `boltholdUnique:"ConstraintName"` struct tag:
+
+```Go
+type User struct {
+  Name string
+  Email string `boltholdUnique:"UniqueEmail"` // this field will be indexed with a unique constraint
+}
+```
+
+The example above will only allow one record of type `User` to exist with a given `Email` field. Any insert, update or upsert that would violate that constraint will fail and return the `bolthold.ErrUniqueExists` error.
+
+
 ### ForEach
 
 When working with large datasets, you may not want to have to store the entire dataset in memory. It's be much more efficient to work with a single record at a time rather than grab all the records and loop through them, which is what cursors are used for in databases. In BoltHold you can accomplish the same thing by calling ForEach:
