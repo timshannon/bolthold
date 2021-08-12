@@ -107,6 +107,13 @@ Fields must be exported, and thus always need to start with an upper-case letter
 - ContainsAny - `Where("field").Contains(val1, val2, val3)`
 - HasKey - `Where("field").HasKey(val1) // to test if a Map value has a key`
 
+An empty / zero value query matches against all records, because it has no critiera.  You can then use `Skip` and `Limit` to page through all records in your dataset:
+```Go
+q := &bolthold.Query{}
+
+err := store.Find(&result, q.Skip(10).Limit(50))
+```
+
 If you want to run a query's criteria against the Key value, you can use the `bolthold.Key` constant:
 
 ```Go
