@@ -519,3 +519,52 @@ func TestFindAggregateWithNoGroupBy(t *testing.T) {
 
 	})
 }
+
+func TestIssue130FindAggregateWithNestedGroupBy(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type NestedAggregateChild struct {
+			Grouping string
+			Value    int
+		}
+
+		type NestedAggregate struct {
+			Child NestedAggregateChild
+		}
+
+		for i := 0; i < 20; i++ {
+			var group = "group1"
+			if i%2 == 0 {
+				group = "group2"
+			}
+
+			store.Insert(i, NestedAggregate{
+				Child: NestedAggregateChild{
+					Grouping: group,
+					Value:    1,
+				},
+			})
+		}
+
+		result, err := store.FindAggregate(NestedAggregate{}, nil, "Child.Grouping")
+		ok(t, err)
+
+		equals(t, 2, len(result))
+
+		for i := range result {
+			equals(t, result[i].Count(), 10)
+			equals(t, result[i].Sum("Child.Value"), 10.0)
+			equals(t, result[i].Avg("Child.Value"), 1.0)
+
+			r := &NestedAggregate{}
+			result[i].Max("Child.Value", r)
+			equals(t, 1, r.Child.Value)
+
+			result[i].Min("Child.Value", r)
+			equals(t, 1, r.Child.Value)
+
+			result[i].Sort("Child.Value")
+		}
+
+	})
+}

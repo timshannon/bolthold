@@ -411,12 +411,11 @@ func (s *Store) aggregateQuery(source BucketSource, dataType interface{}, query 
 			grouping := make([]reflect.Value, len(groupBy))
 
 			for i := range groupBy {
-				fVal := r.value.Elem().FieldByName(groupBy[i])
-				if !fVal.IsValid() {
-					return fmt.Errorf("The field %s does not exist in the type %s", groupBy[i], r.value.Type())
+				fVal, err := fieldValue(r.value.Elem(), groupBy[i])
+				if err != nil {
+					return err
 				}
-
-				grouping[i] = fVal
+				grouping[i] = reflect.ValueOf(fVal)
 			}
 
 			var err error

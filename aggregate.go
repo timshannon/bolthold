@@ -66,17 +66,17 @@ func (a *aggregateResultSort) Swap(i, j int) {
 }
 func (a *aggregateResultSort) Less(i, j int) bool {
 	//reduction values are always pointers
-	iVal := a.reduction[i].Elem().FieldByName(a.sortby)
-	if !iVal.IsValid() {
-		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[i].Type()))
+	iVal, err := fieldValue(a.reduction[i].Elem(), a.sortby)
+	if err != nil {
+		panic(err)
 	}
 
-	jVal := a.reduction[j].Elem().FieldByName(a.sortby)
-	if !jVal.IsValid() {
-		panic(fmt.Sprintf("The field %s does not exist in the type %s", a.sortby, a.reduction[j].Type()))
+	jVal, err := fieldValue(a.reduction[j].Elem(), a.sortby)
+	if err != nil {
+		panic(err)
 	}
 
-	c, err := compare(iVal.Interface(), jVal.Interface())
+	c, err := compare(iVal, jVal)
 	if err != nil {
 		panic(err)
 	}
@@ -144,12 +144,12 @@ func (a *AggregateResult) Sum(field string) float64 {
 	var sum float64
 
 	for i := range a.reduction {
-		fVal := a.reduction[i].Elem().FieldByName(field)
-		if !fVal.IsValid() {
-			panic(fmt.Sprintf("The field %s does not exist in the type %s", field, a.reduction[i].Type()))
+		fVal, err := fieldValue(a.reduction[i].Elem(), field)
+		if err != nil {
+			panic(err)
 		}
 
-		sum += tryFloat(fVal)
+		sum += tryFloat(reflect.ValueOf(fVal))
 	}
 
 	return sum
