@@ -209,7 +209,7 @@ err := store.Insert(bolthold.NextSequence(), data)
 
 The key value will be a `uint64`.
 
-If you want to know the value of the auto-incrementing Key that was generated using `bolthold.NextSequence()`, then make sure to pass your data by value and that the `boltholdKey` tagged field is of type `uint64`.
+If you want to know the value of the auto-incrementing Key that was generated using `bolthold.NextSequence()`, then make sure to pass your data by reference and that the `boltholdKey` tagged field is of type `uint64`.
 
 ```Go
 err := store.Insert(bolthold.NextSequence(), &data)
