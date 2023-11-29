@@ -81,13 +81,15 @@ type Criterion struct {
 	negate   bool
 }
 
-func hasMatchFunc(criteria []*Criterion) bool {
+// some operators can't function against an indexed value, they need to look at
+// the entire record
+func canUseIndex(criteria []*Criterion) bool {
 	for _, c := range criteria {
-		if c.operator == fn {
-			return true
+		if c.operator == fn || c.operator == all {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 // Slice turns a slice of any time into []interface{} by copying the slice values so it can be easily passed
