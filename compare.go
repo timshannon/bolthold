@@ -32,6 +32,10 @@ type Comparer interface {
 }
 
 func (c *Criterion) compare(rowValue, criterionValue interface{}, currentRow interface{}) (int, error) {
+	if reflect.TypeOf(rowValue) == reflect.TypeOf(reflect.Value{}) {
+		rowValue = rowValue.(reflect.Value).Interface()
+	}
+
 	if rowValue == nil || criterionValue == nil {
 		if rowValue == criterionValue {
 			return 0, nil

@@ -265,8 +265,8 @@ func (s *Store) newIterator(source BucketSource, typeName string, query *Query) 
 		iBucket = source.Bucket(indexBucketName(typeName, query.index))
 	}
 
-	if iBucket == nil || hasMatchFunc(criteria) {
-		// bad index or matches Function on indexed field, filter through entire store
+	if iBucket == nil || !canUseIndex(criteria) {
+		// bad index or criteria that can't use indexes, filter through entire store
 		query.badIndex = true
 
 		iter.indexCursor = source.Bucket([]byte(typeName)).Cursor()

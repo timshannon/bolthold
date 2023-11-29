@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/timshannon/bolthold"
+	bh "github.com/timshannon/bolthold"
 )
 
 type ItemTest struct {
@@ -1225,5 +1226,31 @@ func Test67SeekCursor(t *testing.T) {
 		result = nil
 		ok(t, store.Find(&result, bolthold.Where(bolthold.Key).Gt(0)))
 		equals(t, 0, len(result))
+	})
+}
+
+func TestIssue137SliceIndexWithPointers(t *testing.T) {
+
+	type Event struct {
+		Id         uint64
+		Type       string   `boltholdIndex:"Type"`
+		Categories []string `boltholdSliceIndex:"Categories"`
+	}
+
+	testWrap(t, func(store *bh.Store, t *testing.T) {
+		cat1 := "Cat 1"
+		cat2 := "Cat 2"
+		cat3 := "Cat 3"
+
+		e1 := &Event{Id: 1, Type: "Type1", Categories: []string{cat1, cat2}}
+		e2 := &Event{Id: 2, Type: "Type1", Categories: []string{cat3}}
+
+		ok(t, store.Insert(e1.Id, e1))
+		ok(t, store.Insert(e2.Id, e2))
+
+		var es []*Event
+		query := bh.Where("Categories").ContainsAll(cat1, cat2).Index("Categories")
+		ok(t, store.Find(&es, query))
+		equals(t, 1, len(es))
 	})
 }
