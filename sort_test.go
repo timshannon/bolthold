@@ -72,6 +72,16 @@ var sortTests = []test{
 		query:  bolthold.Where("Category").Eq("animal").SortBy("Name").Skip(10),
 		result: []int{},
 	},
+	{
+		name:   "Sort By Key",
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Key"),
+		result: []int{2, 5, 8, 9, 13, 14, 16},
+	},
+	{
+		name:   "Sort By Key Reversed",
+		query:  bolthold.Where("Category").Eq("animal").SortBy("Key").Reverse(),
+		result: []int{16, 14, 13, 9, 8, 5, 2},
+	},
 }
 
 func TestSortedFind(t *testing.T) {
@@ -257,5 +267,47 @@ func TestSortedFindWithNonSlicePtr(t *testing.T) {
 		}()
 		var result []ItemTest
 		_ = store.Find(result, bolthold.Where("Name").Eq("blah").SortBy("Name"))
+	})
+}
+
+func TestIssue139SortOnSequenceKey(t *testing.T) {
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type Row struct {
+			ID uint64 `boltholdKey:"ID"`
+		}
+
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+
+		var rows []*Row
+		ok(t, store.Find(&rows, (&bolthold.Query{}).SortBy("ID").Reverse()))
+		equals(t, uint64(4), rows[0].ID)
+		equals(t, uint64(3), rows[1].ID)
+		equals(t, uint64(2), rows[2].ID)
+		equals(t, uint64(1), rows[3].ID)
+
+	})
+
+	testWrap(t, func(store *bolthold.Store, t *testing.T) {
+
+		type Row struct {
+			ID *uint64 `boltholdKey:"ID"`
+		}
+
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+		ok(t, store.Insert(bolthold.NextSequence(), &Row{}))
+
+		var rows []*Row
+		ok(t, store.Find(&rows, (&bolthold.Query{}).SortBy("ID").Reverse()))
+		equals(t, uint64(4), *rows[0].ID)
+		equals(t, uint64(3), *rows[1].ID)
+		equals(t, uint64(2), *rows[2].ID)
+		equals(t, uint64(1), *rows[3].ID)
+
 	})
 }
