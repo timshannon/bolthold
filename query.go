@@ -144,6 +144,19 @@ func (s *Store) runQuerySort(source BucketSource, dataType interface{}, query *Q
 		}
 	}
 
+	tp := query.dataType
+
+	var keyType reflect.Type
+	var keyField string
+
+	for i := 0; i < tp.NumField(); i++ {
+		if strings.Contains(string(tp.Field(i).Tag), BoltholdKeyTag) {
+			keyType = tp.Field(i).Type
+			keyField = tp.Field(i).Name
+			break
+		}
+	}
+
 	// Run query without sort, skip or limit
 	// apply sort, skip and limit to entire dataset
 	qCopy := *query
@@ -154,6 +167,24 @@ func (s *Store) runQuerySort(source BucketSource, dataType interface{}, query *Q
 	var records []*record
 	err := s.runQuery(source, dataType, &qCopy, nil, 0,
 		func(r *record) error {
+			if keyType != nil {
+				var rowValue reflect.Value
+
+				// FIXME:
+				if tp.Kind() == reflect.Ptr {
+					rowValue = r.value
+				} else {
+					rowValue = r.value.Elem()
+				}
+				rowKey := rowValue
+				for rowKey.Kind() == reflect.Ptr {
+					rowKey = rowKey.Elem()
+				}
+				err := s.decode(r.key, rowKey.FieldByName(keyField).Addr().Interface())
+				if err != nil {
+					return err
+				}
+			}
 			records = append(records, r)
 
 			return nil
